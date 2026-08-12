@@ -1,0 +1,6 @@
+{
+  "name": "SIVI WALLET",
+  "description": "SIVI WALLET - Smart Personal & Group Financial Assistant with Gemini AI & Spring Boot API integration",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
