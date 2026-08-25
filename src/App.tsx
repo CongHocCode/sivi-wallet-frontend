@@ -70,6 +70,10 @@ import { QuickRecordWidget } from './components/QuickRecordWidget';
 import { GroupDebtDetailModal } from './components/GroupDebtDetailModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
+
+import { geminiService } from './services/geminiService';
+
+
 type ActiveTab = 'overview' | 'wallets' | 'groups' | 'debts' | 'analytics' | 'coach';
 
 const renderCategoryIcon = (tx: Transaction) => {
