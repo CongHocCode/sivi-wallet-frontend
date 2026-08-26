@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff, Sparkles, Send, Check, X, AlertCircle } from 'lucide-react';
 import { apiService } from '../services/api';
+import { geminiService } from '../services/geminiService';
 import { NLPParsedTransaction, Wallet, Category } from '../types';
 import { formatVND } from '../lib/formatters';
 
@@ -42,6 +43,11 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
       setSelectedWalletId(wallets[0].id);
     }
   }, [wallets]);
+
+  const updateParsedTx = (field: keyof NLPParsedTransaction, value: any) => {
+    if (!parsedTx) return;
+    setParsedTx({ ...parsedTx, [field]: value });
+  };
 
   if (!isOpen) return null;
 
@@ -95,13 +101,22 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
     setParsedTx(null);
 
     try {
-      const result = await apiService.parseNaturalLanguageTransaction(inputText);
-      setParsedTx(result);
+      const result = await geminiService.parseNaturalLanguage(inputText);
+      const mappedResult: NLPParsedTransaction = {
+        type: 'EXPENSE',
+        amount: result.amount || 0,
+        note: result.note || inputText,
+        category: result.category || 'Khác',
+        walletName: result.wallet || '',
+        date: new Date().toISOString().split('T')[0],
+        splitWith: result.splitWith || [],
+      };
+      setParsedTx(mappedResult);
 
       // Try matching wallet
-      if (result.walletName) {
+      if (mappedResult.walletName) {
         const matchedWallet = wallets.find((w) =>
-          w.name.toLowerCase().includes(result.walletName.toLowerCase())
+          w.name.toLowerCase().includes(mappedResult.walletName.toLowerCase())
         );
         if (matchedWallet) {
           setSelectedWalletId(matchedWallet.id);
@@ -122,6 +137,11 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
       const wallet = wallets.find((w) => w.id === selectedWalletId);
       const cat = categories.find((c) => c.name.toLowerCase().includes(parsedTx.category.toLowerCase())) || categories[0];
 
+      let finalNote = parsedTx.note;
+      if (parsedTx.splitWith && parsedTx.splitWith.length > 0) {
+        finalNote += ` (Chia với: ${parsedTx.splitWith.join(', ')})`;
+      }
+
       await apiService.addTransaction({
         walletId: selectedWalletId,
         walletName: wallet?.name,
@@ -130,7 +150,7 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
         categoryIcon: cat.icon,
         amount: parsedTx.amount,
         type: parsedTx.type || 'EXPENSE',
-        note: parsedTx.note,
+        note: finalNote,
         date: parsedTx.date || new Date().toISOString(),
       });
 
@@ -252,32 +272,53 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
                 <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
                   Kết quả phân tích Gemini AI:
                 </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-emerald-200 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
-                  {parsedTx.type}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-semibold text-slate-500">Loại:</span>
+                  <select
+                    value={parsedTx.type}
+                    onChange={(e) => updateParsedTx('type', e.target.value)}
+                    className="p-1 text-[10px] font-extrabold uppercase rounded bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 focus:outline-none"
+                  >
+                    <option value="EXPENSE">Khoản chi</option>
+                    <option value="INCOME">Khoản thu</option>
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Nội dung:</span>
-                  <p className="font-bold text-slate-900 dark:text-white">{parsedTx.note}</p>
+                  <input
+                    type="text"
+                    value={parsedTx.note}
+                    onChange={(e) => updateParsedTx('note', e.target.value)}
+                    className="w-full mt-0.5 p-1.5 text-xs font-semibold rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
                 </div>
                 <div>
-                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Số tiền:</span>
-                  <p className="font-black text-emerald-600 dark:text-emerald-400 text-base">
-                    {formatVND(parsedTx.amount)}
-                  </p>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Số tiền (đ):</span>
+                  <input
+                    type="number"
+                    value={parsedTx.amount}
+                    onChange={(e) => updateParsedTx('amount', Number(e.target.value))}
+                    className="w-full mt-0.5 p-1.5 text-xs font-bold rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-emerald-600 dark:text-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
                 </div>
                 <div>
                   <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Danh mục:</span>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">{parsedTx.category}</p>
+                  <input
+                    type="text"
+                    value={parsedTx.category}
+                    onChange={(e) => updateParsedTx('category', e.target.value)}
+                    className="w-full mt-0.5 p-1.5 text-xs font-semibold rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
                 </div>
                 <div>
                   <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Chọn ví ghi nhận:</span>
                   <select
                     value={selectedWalletId}
                     onChange={(e) => setSelectedWalletId(e.target.value)}
-                    className="w-full mt-0.5 p-1.5 text-xs font-bold rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white"
+                    className="w-full mt-0.5 p-1.5 text-xs font-semibold rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   >
                     {wallets.map((w) => (
                       <option key={w.id} value={w.id}>
@@ -285,6 +326,16 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Chia tiền với (dùng dấu phẩy ngăn cách):</span>
+                  <input
+                    type="text"
+                    value={parsedTx.splitWith ? parsedTx.splitWith.join(', ') : ''}
+                    onChange={(e) => updateParsedTx('splitWith', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+                    placeholder="Ví dụ: Nam, An"
+                    className="w-full mt-0.5 p-1.5 text-xs font-semibold rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
                 </div>
               </div>
             </div>

@@ -19,8 +19,28 @@ import {
   Zap,
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { geminiService } from '../services/geminiService';
 import { Transaction, FinancialCoachResponse } from '../types';
 import { formatVND } from '../lib/formatters';
+
+const getTopCategory = (txs: Transaction[]): string => {
+  const expenseTransactions = txs.filter((t) => t.type === 'EXPENSE');
+  if (expenseTransactions.length === 0) return 'Không có chi tiêu';
+  const categoryTotals: Record<string, number> = {};
+  expenseTransactions.forEach((t) => {
+    const catName = t.categoryName || 'Khác';
+    categoryTotals[catName] = (categoryTotals[catName] || 0) + t.amount;
+  });
+  let topCat = 'Khác';
+  let maxAmount = -1;
+  Object.entries(categoryTotals).forEach(([catName, total]) => {
+    if (total > maxAmount) {
+      maxAmount = total;
+      topCat = catName;
+    }
+  });
+  return topCat;
+};
 
 interface AICoachViewProps {
   monthlyIncome: number;
@@ -64,11 +84,24 @@ export const AICoachView: React.FC<AICoachViewProps> = ({
         monthlyExpense,
         transactions
       );
+      
+      const topCategory = getTopCategory(transactions);
+      try {
+        const geminiRoast = await geminiService.generateRoast({
+          totalIncome: monthlyIncome,
+          totalExpense: monthlyExpense,
+          topCategory,
+        });
+        data.roastSummary = geminiRoast;
+      } catch (roastErr) {
+        console.error('Failed to generate Gemini roast:', roastErr);
+      }
+
       setCoachData(data);
     } catch (err) {
       console.error(err);
       // Fallback response
-      setCoachData({
+      const fallbackData: FinancialCoachResponse = {
         title: 'Cố Vấn Sivi: Cảnh Báo Sức Khỏe Sổ Thu Chi',
         roastSummary:
           'Tháng này chi tiêu khá năng nổ đấy nhé! Đừng để tiền ra đi nhanh hơn người yêu cũ. Hãy duy trì tỉ lệ tiết kiệm tối thiểu 20% trước khi lướt các sàn thương mại điện tử nè.',
@@ -83,7 +116,21 @@ export const AICoachView: React.FC<AICoachViewProps> = ({
           { category: 'Ăn uống', text: 'Top 1 khoản chi tiêu lớn nhất tháng này' },
           { category: 'Mua sắm', text: 'Các hóa đơn phát sinh ngẫu hứng cần chú ý' },
         ],
-      });
+      };
+
+      const topCategory = getTopCategory(transactions);
+      try {
+        const geminiRoast = await geminiService.generateRoast({
+          totalIncome: monthlyIncome,
+          totalExpense: monthlyExpense,
+          topCategory,
+        });
+        fallbackData.roastSummary = geminiRoast;
+      } catch (roastErr) {
+        console.error('Failed to generate Gemini roast for fallback:', roastErr);
+      }
+
+      setCoachData(fallbackData);
     } finally {
       setIsLoadingCoach(false);
     }
