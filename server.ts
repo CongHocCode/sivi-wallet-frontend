@@ -45,8 +45,8 @@ app.post('/api/gemini/receipt-ocr', async (req, res) => {
     const mimeType = image.includes('data:image/png')
       ? 'image/png'
       : image.includes('data:image/webp')
-      ? 'image/webp'
-      : 'image/jpeg';
+        ? 'image/webp'
+        : 'image/jpeg';
 
     const systemPrompt = `
 You are an expert Vietnamese receipt scanner for SIVI WALLET.
@@ -57,7 +57,7 @@ Analyze the receipt image carefully and extract structured JSON matching the req
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+      model: 'gemini-3.5-flash-lite',
       contents: {
         parts: [
           {
@@ -139,7 +139,7 @@ Xác định Ví (walletName):
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+      model: 'gemini-3.5-flash-lite',
       contents: prompt,
       config: {
         systemInstruction,
@@ -205,7 +205,7 @@ Yêu cầu output JSON:
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+      model: 'gemini-3.5-flash-lite',
       contents: JSON.stringify(summaryData),
       config: {
         systemInstruction,
@@ -268,7 +268,7 @@ Trả lời câu hỏi của người dùng bằng tiếng Việt tự nhiên, t
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+      model: 'gemini-3.5-flash-lite',
       contents: `Câu hỏi người dùng: "${question}"`,
       config: {
         systemInstruction,

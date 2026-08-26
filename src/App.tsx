@@ -69,12 +69,12 @@ import { SettingsModal } from './components/SettingsModal';
 import { QuickRecordWidget } from './components/QuickRecordWidget';
 import { GroupDebtDetailModal } from './components/GroupDebtDetailModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
-
+import { TransactionHistoryView } from './components/TransactionHistoryView';
+import { TransactionDetailModal } from './components/TransactionDetailModal';
 
 import { geminiService } from './services/geminiService';
 
-
-type ActiveTab = 'overview' | 'wallets' | 'groups' | 'debts' | 'analytics' | 'coach';
+type ActiveTab = 'overview' | 'transactions' | 'wallets' | 'groups' | 'debts' | 'analytics' | 'coach';
 
 const renderCategoryIcon = (tx: Transaction) => {
   const icon = tx.categoryIcon || '';
@@ -210,6 +210,7 @@ export default function App() {
   const [isOcrOpen, setIsOcrOpen] = useState(false);
   const [isNlpOpen, setIsNlpOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [selectedTxForDetail, setSelectedTxForDetail] = useState<Transaction | null>(null);
 
   // Load All Data from API / LocalStorage
   const loadAppData = async () => {
@@ -411,6 +412,17 @@ export default function App() {
             }`}
           >
             <LayoutDashboard className="w-5 h-5" /> Tổng quan
+          </button>
+
+          <button
+            onClick={() => setActiveTab('transactions')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'transactions'
+                ? 'bg-[#F1EFE7] text-[#7D8F69]'
+                : 'text-[#8C857D] hover:bg-[#F9F8F3] hover:text-[#2D2926]'
+            }`}
+          >
+            <Receipt className="w-5 h-5 text-[#7D8F69]" /> Sổ giao dịch ({transactions.length})
           </button>
 
           <button
@@ -616,10 +628,18 @@ export default function App() {
             <section className="flex-1 bg-white border border-[#EAE7DC] rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-sm flex flex-col min-h-[280px]">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center justify-between mb-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-[#4A443F] text-sm sm:text-base">Giao dịch gần đây</h3>
-                  <span className="text-[11px] font-medium text-[#8C857D] ml-2">
-                    ({filteredTransactions.length} giao dịch)
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-[#4A443F] text-sm sm:text-base">Giao dịch gần đây</h3>
+                    <span className="text-[11px] font-medium text-[#8C857D]">
+                      ({filteredTransactions.length})
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('transactions')}
+                    className="text-xs font-bold text-[#7D8F69] hover:underline ml-3"
+                  >
+                    Xem tất cả ({transactions.length}) →
+                  </button>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -689,7 +709,8 @@ export default function App() {
                   filteredTransactions.map((tx) => (
                     <div
                       key={tx.id}
-                      className="flex items-center justify-between p-2.5 sm:p-3 hover:bg-[#F9F8F3] rounded-2xl group transition-colors border-b border-[#F9F8F3] last:border-none gap-3"
+                      onClick={() => setSelectedTxForDetail(tx)}
+                      className="flex items-center justify-between p-2.5 sm:p-3 hover:bg-[#F9F8F3] rounded-2xl group transition-colors border-b border-[#F9F8F3] last:border-none gap-3 cursor-pointer"
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         {renderCategoryIcon(tx)}
@@ -779,6 +800,19 @@ export default function App() {
               </div>
             </section>
           </>
+        )}
+
+        {/* TRANSACTIONS TAB CONTENT (SỔ GIAO DỊCH) */}
+        {activeTab === 'transactions' && (
+          <TransactionHistoryView
+            transactions={transactions}
+            wallets={wallets}
+            categories={categories}
+            onDeleteTransaction={handleDeleteTransaction}
+            onOpenAddModal={() => setIsAddTxOpen(true)}
+            onOpenOcrModal={() => setIsOcrOpen(true)}
+            onOpenNlpModal={() => setIsNlpOpen(true)}
+          />
         )}
 
         {/* WALLETS TAB CONTENT */}
@@ -1121,6 +1155,16 @@ export default function App() {
         </button>
 
         <button
+          onClick={() => setActiveTab('transactions')}
+          className={`flex flex-col items-center gap-1 p-1 text-center transition ${
+            activeTab === 'transactions' ? 'text-[#7D8F69] font-bold' : 'text-[#8C857D]'
+          }`}
+        >
+          <Receipt className="w-5 h-5" />
+          <span className="text-[10px]">Sổ GD</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('analytics')}
           className={`flex flex-col items-center gap-1 p-1 text-center transition ${
             activeTab === 'analytics' ? 'text-[#7D8F69] font-bold' : 'text-[#8C857D]'
@@ -1269,6 +1313,24 @@ export default function App() {
         wallets={wallets}
         categories={categories}
         onSuccess={loadAppData}
+        onSave={async (newTx) => {
+          await apiService.addTransaction({
+            walletId: newTx.walletId,
+            walletName: newTx.walletName,
+            categoryId: newTx.categoryId,
+            categoryName: newTx.categoryName,
+            categoryIcon: newTx.categoryIcon,
+            amount: newTx.amount,
+            type: (newTx.type || 'EXPENSE') as TransactionType,
+            note: newTx.note,
+            date: newTx.date,
+            receiptImageUrl: newTx.receiptImageUrl,
+            items: newTx.items,
+            merchantName: newTx.merchantName,
+          });
+          await loadAppData();
+          setIsOcrOpen(false);
+        }}
       />
 
       <NLPTransactionModal
@@ -1283,6 +1345,15 @@ export default function App() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onStatusChange={loadAppData}
+      />
+
+      <TransactionDetailModal
+        isOpen={!!selectedTxForDetail}
+        onClose={() => setSelectedTxForDetail(null)}
+        transaction={selectedTxForDetail}
+        wallets={wallets}
+        categories={categories}
+        onDelete={handleDeleteTransaction}
       />
     </div>
   );

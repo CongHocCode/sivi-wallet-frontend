@@ -17,6 +17,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { geminiService } from '../services/geminiService';
 import { Wallet, Category, TransactionType } from '../types';
 import { formatVND, parseVNDInput } from '../lib/formatters';
 
@@ -144,11 +145,11 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
   };
 
   const handleOcrProcess = async () => {
-    if (!previewUrl) return;
+    if (!selectedFile) return;
     setIsOcrLoading(true);
     try {
-      const res = await apiService.scanReceiptOCR(previewUrl);
-      if (res && res.items) {
+      const res = await geminiService.scanReceipt(selectedFile);
+      if (res) {
         const defaultWallet = wallets[0];
         const defaultCat = categories[0];
 

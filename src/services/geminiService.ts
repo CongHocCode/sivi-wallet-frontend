@@ -22,24 +22,28 @@ export const geminiService = {
    * Feature 1: AI Receipt OCR Scanner (Multimodal Vision)
    * Extracts structured transaction details from Vietnamese receipt images.
    */
-  async scanReceipt(imageFile: File) {
+  async scanReceipt(imageFile: File, userInstruction?: string) {
     const base64Data = await fileToBase64(imageFile);
 
     const prompt = `You are a Financial Receipt OCR Extractor for Vietnamese receipts.
 Extract data into valid JSON with schema:
 {
   "merchantName": "string or null",
-  "transactionDate": "YYYY-MM-DD or null",
+  "transactionDate": "YYYY-MM-DDTHH:mm (extract both date AND time/hours:minutes from the receipt if visible, e.g. 2025-08-25T22:38. If time is not visible on the receipt, default to current date/time)",
   "totalAmount": integer or null,
   "category": "string (Ăn uống, Di chuyển, Đi chợ / Siêu thị, Mua sắm, Giải trí, Khác)",
   "items": [
     { "itemName": "string", "quantity": 1, "totalPrice": integer }
-  ]
+  ],
+  "note": "string or null (summary of notes, split info, or user instructions)"
 }
+
+User's custom instruction: "${userInstruction || 'None'}". Follow this instruction strictly when computing totalAmount, excluding items, or drafting the note.
+
 Output ONLY raw JSON. No markdown backticks.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash", // Fast and multimodal-optimized Flash model
+      model: "gemini-3.5-flash-lite", // Fast and multimodal-optimized Flash model
       contents: [
         {
           role: "user",
@@ -77,7 +81,7 @@ Schema:
 Output ONLY raw JSON. No markdown backticks.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.5-flash-lite",
       contents: prompt,
     });
 
@@ -105,7 +109,7 @@ Dữ liệu tháng này:
 Hãy đưa ra đúng 2 câu nhận xét cực mặn bằng tiếng Việt, vừa nhắc nhở vừa mang tính giải trí!`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.5-flash-lite",
       contents: prompt,
     });
 

@@ -60,6 +60,8 @@ export interface Transaction {
   groupName?: string;
   receiptImageUrl?: string;
   settlementDebtorName?: string;
+  items?: ReceiptItem[];
+  merchantName?: string;
   createdAt: string;
 }
 
@@ -139,6 +141,7 @@ export interface NLPParsedTransaction {
   date: string;
   targetPerson?: string;
   isGroupBill?: boolean;
+  splitWith?: string[];
 }
 
 export interface FinancialCoachResponse {

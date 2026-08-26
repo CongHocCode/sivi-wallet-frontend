@@ -5,8 +5,28 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Flame, RefreshCw, AlertTriangle, TrendingUp, Lightbulb } from 'lucide-react';
 import { apiService } from '../services/api';
+import { geminiService } from '../services/geminiService';
 import { Transaction, FinancialCoachResponse } from '../types';
 import { formatVND } from '../lib/formatters';
+
+const getTopCategory = (txs: Transaction[]): string => {
+  const expenseTransactions = txs.filter((t) => t.type === 'EXPENSE');
+  if (expenseTransactions.length === 0) return 'Không có chi tiêu';
+  const categoryTotals: Record<string, number> = {};
+  expenseTransactions.forEach((t) => {
+    const catName = t.categoryName || 'Khác';
+    categoryTotals[catName] = (categoryTotals[catName] || 0) + t.amount;
+  });
+  let topCat = 'Khác';
+  let maxAmount = -1;
+  Object.entries(categoryTotals).forEach(([catName, total]) => {
+    if (total > maxAmount) {
+      maxAmount = total;
+      topCat = catName;
+    }
+  });
+  return topCat;
+};
 
 interface FinancialCoachWidgetProps {
   monthlyIncome: number;
@@ -28,11 +48,24 @@ export const FinancialCoachWidget: React.FC<FinancialCoachWidgetProps> = ({
     setError(null);
     try {
       const data = await apiService.getFinancialCoachAdvice(monthlyIncome, monthlyExpense, transactions);
+      
+      const topCategory = getTopCategory(transactions);
+      try {
+        const geminiRoast = await geminiService.generateRoast({
+          totalIncome: monthlyIncome,
+          totalExpense: monthlyExpense,
+          topCategory,
+        });
+        data.roastSummary = geminiRoast;
+      } catch (roastErr) {
+        console.error('Failed to generate Gemini roast:', roastErr);
+      }
+
       setCoachData(data);
     } catch (err: any) {
       console.error(err);
       // Fallback response if offline/error
-      setCoachData({
+      const fallbackData: FinancialCoachResponse = {
         title: 'Cố Vấn Sivi: Cảnh Báo Ví Tiền Tháng 8',
         roastSummary:
           'Tháng này chi tiêu có vẻ bay bổng phết nhỉ! Đừng để tiền đi nhanh như xe ôm công nghệ giờ cao điểm. Hãy dành 20% thu nhập tiết kiệm trước khi mua sắm nhen.',
@@ -47,7 +80,21 @@ export const FinancialCoachWidget: React.FC<FinancialCoachWidgetProps> = ({
           { category: 'Ăn uống', text: 'Top 1 tốn kém nhất tháng này' },
           { category: 'Mua sắm', text: 'Cần kiểm soát thêm các hóa đơn ngẫu hứng' },
         ],
-      });
+      };
+
+      const topCategory = getTopCategory(transactions);
+      try {
+        const geminiRoast = await geminiService.generateRoast({
+          totalIncome: monthlyIncome,
+          totalExpense: monthlyExpense,
+          topCategory,
+        });
+        fallbackData.roastSummary = geminiRoast;
+      } catch (roastErr) {
+        console.error('Failed to generate Gemini roast for fallback:', roastErr);
+      }
+
+      setCoachData(fallbackData);
     } finally {
       setIsLoading(false);
     }
