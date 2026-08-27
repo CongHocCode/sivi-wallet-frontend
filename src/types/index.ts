@@ -7,7 +7,7 @@ export type WalletType = 'CASH' | 'BANK' | 'E_WALLET';
 
 export interface User {
   id: string | number;
-  email: string;
+  email?: string;
   name: string;
   username?: string;
   fullName?: string;
@@ -103,7 +103,8 @@ export interface SplitDetail {
 }
 
 export interface BillItem {
-  userId: string | number;
+  userId?: string | number | null;
+  fullName?: string;
   amountShare: number;
   isPaid: boolean;
 }

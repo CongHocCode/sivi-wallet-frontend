@@ -640,7 +640,7 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-              {availableCategories.slice(0, 10).map((cat) => {
+              {availableCategories.map((cat) => {
                 const IconComponent = getCategoryIconComponent(cat.icon, cat.name);
                 const isSelected = manualCatId === cat.id;
 
@@ -664,7 +664,7 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
           </div>
 
           {/* Form Fields Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {/* Type selector */}
             <div className="flex bg-[#F9F8F3] p-1 rounded-xl border border-[#EAE7DC]">
               <button
@@ -705,19 +705,6 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
               {wallets.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name} ({formatVND(w.balance)})
-                </option>
-              ))}
-            </select>
-
-            {/* Category dropdown (for full list) */}
-            <select
-              value={manualCatId}
-              onChange={(e) => setManualCatId(e.target.value)}
-              className="p-2 text-xs font-semibold rounded-xl border border-[#EAE7DC] bg-[#F9F8F3] text-[#2D2926] focus:outline-none focus:ring-1 focus:ring-[#7D8F69]"
-            >
-              {availableCategories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  📁 {c.name}
                 </option>
               ))}
             </select>

@@ -431,6 +431,8 @@ const handleUserSearch = (req: any, res: any) => {
     { id: 'usr_008', username: 'bao.dang', name: 'Đặng Quốc Bảo', fullName: 'Đặng Quốc Bảo', email: 'bao.dang@sivi.vn', isGuest: false },
     { id: 'usr_009', username: 'minh.tran', name: 'Trần Đức Minh', fullName: 'Trần Đức Minh', email: 'ducminh.dev@gmail.com', isGuest: false },
     { id: 'usr_010', username: 'phuong.le', name: 'Lê Thu Phương', fullName: 'Lê Thu Phương', email: 'phuong.le@gmail.com', isGuest: false },
+    { id: 'gst_001', name: 'Bác Ba Quán Nước', fullName: 'Bác Ba Quán Nước', isGuest: true },
+    { id: 'gst_002', name: 'Anh Shipper Grab', fullName: 'Anh Shipper Grab', isGuest: true },
   ];
 
   if (!q) {

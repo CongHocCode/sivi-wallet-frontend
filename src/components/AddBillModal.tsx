@@ -260,13 +260,15 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
 
   const totalAmount = parseVNDInput(totalAmountInput);
 
-  // Thêm thành viên là User thật từ kết quả tìm kiếm
-  const handleAddRealUser = (userItem: User) => {
+  // Thêm thành viên là User thật hoặc Khách cũ từ kết quả tìm kiếm (có userId)
+  const handleAddUserOrGuest = (userItem: User) => {
+    const isGuest = !!userItem.isGuest;
+    const displayName = userItem.fullName || userItem.name || userItem.username || (isGuest ? 'Khách' : 'Thành viên');
     const newParticipant: Participant = {
-      id: String(userItem.id || 'usr_' + Date.now()),
-      name: userItem.fullName || userItem.name || userItem.username || 'Thành viên',
+      id: String(userItem.id || (isGuest ? 'guest_' : 'usr_') + Date.now()),
+      name: displayName,
       isMe: false,
-      isGuest: false,
+      isGuest: isGuest,
       userId: userItem.id,
     };
     setParticipants((prev) => [...prev, newParticipant]);
@@ -275,7 +277,7 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
     setShowSearchDropdown(false);
   };
 
-  // Thêm nhanh thành viên Khách (Guest) mới
+  // Thêm nhanh thành viên Khách (Guest) mới tinh (chưa có trong hệ thống, userId = null)
   const handleAddGuest = (name: string) => {
     const cleanName = name.trim();
     if (!cleanName) return;
@@ -284,6 +286,7 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
       name: cleanName,
       isMe: false,
       isGuest: true,
+      userId: undefined, // Khách mới tinh: userId = null khi gửi API
     };
     setParticipants((prev) => [...prev, guestParticipant]);
     setSelectedMemberIds((prev) => new Set([...prev, guestParticipant.id]));
@@ -455,14 +458,34 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
       return;
     }
 
-    // Payload items chuẩn
+    // Payload items chuẩn gửi api.bills.create
     const itemsPayload: BillItem[] = participants.map((p) => {
       const isPayer = p.id === actualPayerId;
       const splitObj = splitsBreakdown.find((s) => s.memberId === p.id);
       const amountShare = splitObj ? splitObj.amount : 0;
 
+      // 1. Nếu là Tôi
+      if (p.isMe) {
+        return {
+          userId: p.userId || 'usr_001',
+          amountShare,
+          isPaid: isPayer,
+        };
+      }
+
+      // 2. Nếu chọn người đã có (User thật hoặc Khách cũ): Gửi userId
+      if (p.userId) {
+        return {
+          userId: p.userId,
+          amountShare,
+          isPaid: isPayer,
+        };
+      }
+
+      // 3. Nếu là khách mới tinh: Gửi fullName (để userId = null)
       return {
-        userId: p.userId ? String(p.userId) : p.id,
+        userId: null,
+        fullName: p.name,
         amountShare,
         isPaid: isPayer,
       };
@@ -860,47 +883,63 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                     </div>
                   )}
 
-                  {/* Danh sách User thật tìm được */}
+                  {/* Danh sách người tìm được (Thành viên chính thức hoặc Khách cũ) */}
                   {searchResults
                     .filter(
                       (u) =>
                         !participants.some(
                           (p) =>
                             (p.userId && String(p.userId) === String(u.id)) ||
-                            p.id === u.id ||
+                            p.id === String(u.id) ||
                             p.name.toLowerCase().trim() === (u.fullName || u.name || '').toLowerCase().trim()
                         )
                     )
                     .map((userItem) => {
-                      const displayName = userItem.fullName || userItem.name || userItem.username;
-                      const detailLine = [
-                        userItem.username ? `@${userItem.username}` : '',
-                        userItem.email || '',
-                      ]
-                        .filter(Boolean)
-                        .join(' • ');
+                      const isGuest = !!userItem.isGuest;
+                      const displayName = userItem.fullName || userItem.name || userItem.username || (isGuest ? 'Khách' : 'Thành viên');
+                      const usernameTag = userItem.username ? `(@${userItem.username})` : '';
 
                       return (
                         <div
                           key={userItem.id}
-                          onClick={() => handleAddRealUser(userItem)}
+                          onClick={() => handleAddUserOrGuest(userItem)}
                           className="p-2.5 px-3 flex items-center justify-between hover:bg-[#F9F8F3] cursor-pointer transition"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-7 h-7 rounded-full bg-[#7D8F69]/15 text-[#7D8F69] flex items-center justify-center text-xs font-black shrink-0">
-                              {displayName.charAt(0).toUpperCase()}
+                            <div
+                              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                                isGuest ? 'bg-[#D98B72]/15 text-[#D98B72]' : 'bg-[#7D8F69]/15 text-[#7D8F69]'
+                              }`}
+                            >
+                              {isGuest ? '👥' : '👤'}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-xs font-bold text-[#2D2926] truncate">{displayName}</p>
-                              {detailLine && (
-                                <p className="text-[10px] text-[#8C857D] truncate font-normal">{detailLine}</p>
+                              <p className="text-xs font-bold text-[#2D2926] truncate">
+                                {isGuest ? (
+                                  <>
+                                    👥 {displayName} <span className="text-[#8C857D] font-normal">(Khách cũ)</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    👤 {displayName} {usernameTag && <span className="text-[#8C857D] font-normal">{usernameTag}</span>}
+                                  </>
+                                )}
+                              </p>
+                              {userItem.email && !isGuest && (
+                                <p className="text-[10px] text-[#8C857D] truncate font-normal">{userItem.email}</p>
                               )}
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#7D8F69]/15 text-[#7D8F69] border border-[#7D8F69]/30">
-                              Thành viên {userItem.username ? `(@${userItem.username})` : ''}
-                            </span>
+                            {isGuest ? (
+                              <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#D98B72]/15 text-[#D98B72] border border-[#D98B72]/30">
+                                Khách cũ
+                              </span>
+                            ) : (
+                              <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#7D8F69]/15 text-[#7D8F69] border border-[#7D8F69]/30">
+                                Thành viên chính thức
+                              </span>
+                            )}
                             <span className="text-[10px] font-bold text-[#7D8F69] flex items-center gap-0.5 ml-1">
                               <UserPlus className="w-3 h-3" /> Thêm
                             </span>
@@ -916,13 +955,13 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-7 h-7 rounded-full bg-[#D98B72]/15 text-[#D98B72] flex items-center justify-center text-xs font-black shrink-0">
-                        +
+                        ➕
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-[#2D2926] truncate">
                           ➕ Thêm khách mới: &ldquo;<span className="text-[#D98B72] font-black">{searchQuery.trim()}</span>&rdquo;
                         </p>
-                        <p className="text-[10px] text-[#8C857D]">Tạo nhanh thành viên khách (Guest)</p>
+                        <p className="text-[10px] text-[#8C857D]">Tạo nhanh thành viên khách (chưa có tài khoản)</p>
                       </div>
                     </div>
                     <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-[#7D8F69] text-white shrink-0 hover:bg-[#687856] shadow-2xs">

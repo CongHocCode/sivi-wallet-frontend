@@ -458,6 +458,18 @@ const authModule = {
         email: 'phuong.le@gmail.com',
         isGuest: false,
       },
+      {
+        id: 'gst_001',
+        name: 'Bác Ba Quán Nước',
+        fullName: 'Bác Ba Quán Nước',
+        isGuest: true,
+      },
+      {
+        id: 'gst_002',
+        name: 'Anh Shipper Grab',
+        fullName: 'Anh Shipper Grab',
+        isGuest: true,
+      },
     ];
 
     if (!q) {
