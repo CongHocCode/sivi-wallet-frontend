@@ -139,24 +139,18 @@ app.post('/api/gemini/nlp-transaction', async (req, res) => {
 
   const dateObj = new Date();
   const pad = (n: number) => n.toString().padStart(2, '0');
-  const currentRefTime = `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:${pad(dateObj.getSeconds())}`;
+  const currentRefTime = `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
   const systemInstruction = `
 Bạn là trợ lý tài chính AI thông minh cho ứng dụng SIVI WALLET tại Việt Nam.
-Current Reference Time (Giờ địa phương): ${currentRefTime}
+Current Local Reference Time: '${currentRefTime}'.
 
 Nhiệm vụ của bạn là phân tích câu nói/văn bản tiếng Việt của người dùng và trích xuất thành JSON giao dịch tài chính chuẩn.
 
-1. Quy tắc thời gian tương đối & Giờ cụ thể:
-- Tính toán thời gian tương đối ("lúc sáng", "sáng nay", "hôm nay", "hôm qua", "hôm kia", "trưa nay", "chiều nay", "tối qua", "hồi nãy", "vừa rồi") CHÍNH XÁC dựa trên Current Reference Time: ${currentRefTime}.
-- Nếu người dùng nói giờ cụ thể (VD: '2h sáng' -> 02:00, '3h chiều' -> 15:00, 'trưa nay' -> 12:00, '8h tối' -> 20:00, '14h30' -> 14:30), BẮT BUỘC tính đúng giờ:phút đó vào transactionDate (định dạng YYYY-MM-DDTHH:mm:ss).
-- Nếu có nhắc đến buổi chung chung mà không có số giờ cụ thể:
-  * Sáng: ~08:30:00
-  * Trưa: ~12:00:00
-  * Chiều: ~15:30:00
-  * Tối: ~19:30:00
-  * Đêm / Khuya: ~22:30:00
-- Nếu chỉ nhắc đến ngày không có giờ/buổi, giữ nguyên giờ/phút của Current Reference Time.
-- Định dạng date strictly YYYY-MM-DDTHH:mm:ss.
+1. BẮT BUỘC TÍNH TOÁN NGÀY GIỜ (transactionDate & date):
+- Dựa vào Current Local Reference Time: '${currentRefTime}'.
+- Nếu người dùng nói thời gian tương đối hoặc giờ cụ thể (VD: '2h sáng' -> 02:00, '3h chiều' -> 15:00, '14h30' -> 14:30, 'trưa nay' -> 12:00, 'sáng nay' -> 08:30, 'hôm qua' -> ngày hôm qua, 'hôm kia' -> 2 ngày trước, 'tối qua' -> tối ngày hôm qua 19:30), BẮT BUỘC tính chính xác ra ngày và giờ theo định dạng YYYY-MM-DDTHH:mm.
+- Nếu không nhắc ngày giờ gì cụ thể, dùng đúng Current Local Reference Time: '${currentRefTime}'.
+- Điền giá trị kết quả vào CẢ HAI TRƯỜNG 'transactionDate' và 'date'.
 
 2. Quy tắc chuyển đổi số tiền tiếng Việt:
 - "45k", "45 ngàn", "45 nghìn" -> 45000
@@ -195,11 +189,12 @@ Nhiệm vụ của bạn là phân tích câu nói/văn bản tiếng Việt c�
             note: { type: Type.STRING, description: 'Ghi chú nội dung giao dịch' },
             category: { type: Type.STRING, description: 'Danh mục phù hợp nhất' },
             walletName: { type: Type.STRING, description: 'Ví sử dụng (Tiền mặt, Vietcombank, Ví MoMo...)' },
-            date: { type: Type.STRING, description: 'Thời gian giao dịch ISO YYYY-MM-DD' },
+            transactionDate: { type: Type.STRING, description: 'Thời gian giao dịch YYYY-MM-DDTHH:mm' },
+            date: { type: Type.STRING, description: 'Thời gian giao dịch YYYY-MM-DDTHH:mm' },
             targetPerson: { type: Type.STRING, description: 'Tên người liên quan nếu có (ví dụ Nam, Hùng)' },
             isGroupBill: { type: Type.BOOLEAN, description: 'Có phải kèo chia tiền nhóm không' },
           },
-          required: ['type', 'amount', 'note', 'category', 'walletName'],
+          required: ['type', 'amount', 'note', 'category', 'walletName', 'transactionDate', 'date'],
         },
       },
     });
@@ -233,13 +228,52 @@ Nhiệm vụ của bạn là phân tích câu nói/văn bản tiếng Việt c�
     else if (lower.includes('điện') || lower.includes('nước') || lower.includes('wifi') || lower.includes('mạng')) category = 'Hóa đơn & Tiện ích';
     else if (lower.includes('áo') || lower.includes('quần') || lower.includes('giày') || lower.includes('shopee')) category = 'Mua sắm';
 
+    // Calculate fallback local datetime
+    let fallbackDate = currentRefTime;
+    const now = new Date();
+    let targetDate = new Date(now);
+    if (lower.includes('hôm qua') || lower.includes('tối qua') || lower.includes('đêm qua')) {
+      targetDate.setDate(targetDate.getDate() - 1);
+    } else if (lower.includes('hôm kia')) {
+      targetDate.setDate(targetDate.getDate() - 2);
+    }
+
+    let hours = now.getHours();
+    let minutes = now.getMinutes();
+
+    const timeMatch = lower.match(/(\d{1,2})\s*h\s*(\d{1,2})?/);
+    if (timeMatch) {
+      let h = parseInt(timeMatch[1], 10);
+      const m = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+      if ((lower.includes('chiều') || lower.includes('tối') || lower.includes('đêm')) && h < 12) {
+        h += 12;
+      }
+      hours = h;
+      minutes = m;
+    } else if (lower.includes('trưa')) {
+      hours = 12;
+      minutes = 0;
+    } else if (lower.includes('sáng')) {
+      hours = 8;
+      minutes = 30;
+    } else if (lower.includes('chiều')) {
+      hours = 15;
+      minutes = 30;
+    } else if (lower.includes('tối')) {
+      hours = 19;
+      minutes = 30;
+    }
+
+    fallbackDate = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}T${pad(hours)}:${pad(minutes)}`;
+
     return res.json({
       type: isIncome ? 'INCOME' : 'EXPENSE',
       amount,
       note: prompt,
       category,
       walletName: lower.includes('momo') ? 'Ví MoMo' : lower.includes('vietcombank') ? 'Vietcombank' : 'Tiền mặt',
-      date: new Date().toISOString().slice(0, 10),
+      transactionDate: fallbackDate,
+      date: fallbackDate,
       isGroupBill: lower.includes('chia') || lower.includes('nhóm') || lower.includes('kèo'),
     });
   }

@@ -99,25 +99,27 @@ export const geminiService = {
    * Parses colloquial Vietnamese text/voice statements into structured financial payloads.
    */
   async parseNaturalLanguage(text: string) {
-    const currentRefTime = formatLocalISO(new Date());
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const currentLocalIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
     const prompt = `You are a Vietnamese Natural Language Financial Transaction Parser.
-Current Reference Time (Local Time): ${currentRefTime}
+Current Local Reference Time: '${currentLocalIso}'. If user specifies time (e.g. '2h sáng' -> 02:00, '3h chiều' -> 15:00, 'hôm qua' -> yesterday), calculate exact local datetime into transactionDate ('YYYY-MM-DDTHH:mm').
 
 Analyze the user's input text in Vietnamese and extract structured financial transaction information into valid JSON.
 
 Instructions:
 1. Relative Datetime & Specific Hour Calculation:
-   - Compute relative date and time ("lúc sáng", "sáng nay", "hôm nay", "hôm qua", "hôm kia", "trưa nay", "chiều nay", "tối qua", "hồi nãy", "vừa rồi") STRICTLY relative to the Current Reference Time: ${currentRefTime}.
-   - Nếu người dùng nói giờ cụ thể (VD: '2h sáng' -> 02:00, '3h chiều' -> 15:00, 'trưa nay' -> 12:00, '8h tối' -> 20:00, '14h30' -> 14:30), BẮT BUỘC tính đúng giờ:phút đó vào transactionDate (định dạng YYYY-MM-DDTHH:mm hoặc YYYY-MM-DDTHH:mm:ss).
+   - Compute relative date and time ("lúc sáng", "sáng nay", "hôm nay", "hôm qua", "hôm kia", "trưa nay", "chiều nay", "tối qua", "hồi nãy", "vừa rồi") STRICTLY relative to the Current Local Reference Time: '${currentLocalIso}'.
+   - Nếu người dùng nói giờ cụ thể (VD: '2h sáng' -> 02:00, '3h chiều' -> 15:00, 'trưa nay' -> 12:00, '8h tối' -> 20:00, '14h30' -> 14:30), BẮT BUỘC tính đúng giờ:phút đó vào transactionDate (định dạng YYYY-MM-DDTHH:mm).
    - Nếu có nhắc đến buổi chung chung mà không có số giờ cụ thể:
-     * Sáng (morning): ~08:30:00
-     * Trưa (noon): ~12:00:00
-     * Chiều (afternoon): ~15:30:00
-     * Tối (evening): ~19:30:00
-     * Đêm / Khuya: ~22:30:00
-   - Nếu chỉ nhắc đến ngày không có giờ/buổi, giữ nguyên giờ:phút của Current Reference Time.
-   - Format "transactionDate" strictly as an ISO string in local time: YYYY-MM-DDTHH:mm:ss.
+     * Sáng (morning): ~08:30
+     * Trưa (noon): ~12:00
+     * Chiều (afternoon): ~15:30
+     * Tối (evening): ~19:30
+     * Đêm / Khuya: ~22:30
+   - Nếu chỉ nhắc đến ngày không có giờ/buổi, giữ nguyên giờ:phút của Current Local Reference Time.
+   - Format "transactionDate" strictly as local string: YYYY-MM-DDTHH:mm.
 
 2. Transaction Type Inference:
    - "INCOME": if salary, bonus, receiving money, cash gift, interest, sales revenue, refund (e.g., "nhận lương", "lương về", "được thưởng", "nhận tiền", "được cho", "chuyển khoản đến", "bán đồ", "hoàn tiền", "khách trả tiền").
@@ -136,7 +138,7 @@ Instructions:
   "category": "string (Ăn uống, Di chuyển, Đi chợ / Siêu thị, Mua sắm, Giải trí, Hóa đơn & Tiện ích, Lương / Thu nhập, Sức khỏe, Khác)",
   "wallet": "string (Tiền mặt, MoMo, Vietcombank, Techcombank, MB Bank, ZaloPay, or name mentioned in text)",
   "note": "string (concise summary of transaction description)",
-  "transactionDate": "YYYY-MM-DDTHH:mm:ss",
+  "transactionDate": "YYYY-MM-DDTHH:mm",
   "splitWith": ["string (array of person names if shared/split, otherwise empty array)"]
 }
 
@@ -151,7 +153,13 @@ Output ONLY valid raw JSON without any markdown code fences or backticks.`;
         body: JSON.stringify({ prompt: text }),
       });
       if (response.ok) {
-        return await response.json();
+        const resData = await response.json();
+        const txDate = resData.transactionDate || resData.date || currentLocalIso;
+        return {
+          ...resData,
+          transactionDate: txDate,
+          date: txDate,
+        };
       }
     } catch (e) {
       console.warn('Server NLP fallback:', e);
@@ -167,7 +175,13 @@ Output ONLY valid raw JSON without any markdown code fences or backticks.`;
         const cleanText = (response.text || "{}")
           .replace(/```json|```/g, "")
           .trim();
-        return JSON.parse(cleanText);
+        const parsedData = JSON.parse(cleanText);
+        const txDate = parsedData.transactionDate || parsedData.date || currentLocalIso;
+        return {
+          ...parsedData,
+          transactionDate: txDate,
+          date: txDate,
+        };
       } catch (clientErr) {
         console.warn('Client-side Gemini NLP error / quota limit:', clientErr);
       }
@@ -179,7 +193,7 @@ Output ONLY valid raw JSON without any markdown code fences or backticks.`;
       category: "Ăn uống",
       wallet: "Tiền mặt",
       note: text,
-      transactionDate: new Date().toISOString(),
+      transactionDate: currentLocalIso,
       splitWith: []
     };
   },

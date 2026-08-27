@@ -93,9 +93,21 @@ export function formatVNDShort(amount: number): string {
 }
 
 /**
- * Format ISO string or Transaction to Vietnamese readable date e.g. "11/08/2026 14:30" or "Hôm nay, 14:30"
+ * Format ISO string or Transaction to Vietnamese readable date directly by string splitting to prevent timezone shifting
  */
 export function formatDate(dateOrTx: any): string {
+  if (!dateOrTx) return '';
+  const txObj = typeof dateOrTx === 'object' ? dateOrTx : {};
+  const rawStr = txObj.transactionDate || txObj.date || txObj.createdAt || (typeof dateOrTx === 'string' ? dateOrTx : '');
+
+  if (typeof rawStr === 'string' && rawStr.includes('T')) {
+    const [datePart, timePart] = rawStr.replace('Z', '').split('T');
+    const displayTime = timePart ? timePart.slice(0, 5) : '';
+    if (datePart) {
+      return displayTime ? `${displayTime} • ${datePart}` : datePart;
+    }
+  }
+
   try {
     const d = getTxDate(dateOrTx);
 

@@ -59,7 +59,7 @@ import {
   DebtSummary,
   TransactionType,
 } from './types';
-import { formatVND, formatVNDShort, getTxDate, formatDate, formatTxDateTime } from './lib/formatters';
+import { formatVND, formatVNDShort, getTxDate, formatDate, formatTxDateTime, formatLocalISO } from './lib/formatters';
 
 // Modals & Views
 import { AddTransactionModal } from './components/AddTransactionModal';
@@ -385,6 +385,9 @@ export default function App() {
       ) || categories[0];
 
       if (matchedWallet) {
+        const rawNlpDate = parsed.transactionDate || parsed.date || formatLocalISO(new Date());
+        const transactionDate = rawNlpDate.length === 16 ? `${rawNlpDate}:00` : rawNlpDate;
+
         await apiService.addTransaction({
           walletId: matchedWallet.id,
           walletName: matchedWallet.name,
@@ -394,7 +397,8 @@ export default function App() {
           amount: parsed.amount,
           type: parsed.type || 'EXPENSE',
           note: parsed.note,
-          date: parsed.date || new Date().toISOString(),
+          date: transactionDate,
+          transactionDate: transactionDate,
         });
         setQuickNlpPrompt('');
         loadAppData();

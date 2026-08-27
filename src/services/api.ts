@@ -28,6 +28,7 @@ import {
   LoginDto,
   RegisterDto,
 } from '../types';
+import { formatLocalISO } from '../lib/formatters';
 import {
   INITIAL_USER,
   INITIAL_WALLETS,
@@ -734,16 +735,19 @@ const transactionsModule = {
   },
 
   create: async (txData: CreateTransactionDto): Promise<Transaction> => {
-    // Normalize transactionDate for Spring Boot (YYYY-MM-DDTHH:mm:ss)
-    const rawDate = txData.transactionDate || txData.date || new Date().toISOString();
-    const transactionDate = new Date(rawDate).toISOString().slice(0, 19);
+    // Preserve local transactionDate raw string (YYYY-MM-DDTHH:mm:ss) without UTC shifting
+    const rawDate = txData.transactionDate || txData.date || formatLocalISO(new Date());
+    let transactionDate = String(rawDate).replace('Z', '').trim();
+    if (transactionDate.length === 16) {
+      transactionDate = `${transactionDate}:00`;
+    }
 
     const newTx: Transaction = {
       ...txData,
       id: 'tx_' + Date.now(),
       userId: 'usr_001',
       date: transactionDate,
-      createdAt: new Date().toISOString(),
+      createdAt: transactionDate,
     };
 
     if (!apiClient.getIsMockMode()) {

@@ -163,6 +163,7 @@ export interface NLPParsedTransaction {
   category: string;
   walletName: string;
   date: string;
+  transactionDate?: string;
   targetPerson?: string;
   isGroupBill?: boolean;
   splitWith?: string[];

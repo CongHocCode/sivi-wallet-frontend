@@ -209,17 +209,23 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
       const parsedType = (result.type === 'INCOME' || result.type === 'EXPENSE') ? result.type : 'EXPENSE';
       
       // Determine predicted datetime in local format (YYYY-MM-DDTHH:mm)
-      let parsedDate = toDateTimeLocalString(new Date());
-      if (result.transactionDate && typeof result.transactionDate === 'string') {
-        const trimmed = result.transactionDate.trim();
+      const rawDate = result.transactionDate || result.date;
+      let parsedDate = '';
+      if (rawDate && typeof rawDate === 'string' && rawDate.trim().length >= 10) {
+        const trimmed = rawDate.trim();
         if (trimmed.length >= 16) {
           parsedDate = trimmed.slice(0, 16);
+        } else if (trimmed.length === 10) {
+          const now = new Date();
+          const pad = (n: number) => n.toString().padStart(2, '0');
+          parsedDate = `${trimmed}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
         } else {
-          const testD = new Date(trimmed);
-          if (!isNaN(testD.getTime())) {
-            parsedDate = toDateTimeLocalString(testD);
-          }
+          parsedDate = trimmed;
         }
+      }
+
+      if (!parsedDate) {
+        parsedDate = toDateTimeLocalString(new Date());
       }
 
       const mappedResult: NLPParsedTransaction = {
@@ -227,7 +233,7 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
         amount: Number(result.amount) || 0,
         note: result.note || inputText,
         category: result.category || (parsedType === 'INCOME' ? 'Lương / Thu nhập' : 'Khác'),
-        walletName: result.wallet || '',
+        walletName: result.walletName || result.wallet || '',
         date: parsedDate,
         splitWith: Array.isArray(result.splitWith) ? result.splitWith : [],
       };
@@ -275,20 +281,9 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
         finalNote += ` (Chia với: ${parsedTx.splitWith.join(', ')})`;
       }
 
-      // Format transactionDate directly as local ISO string YYYY-MM-DDTHH:mm:ss WITHOUT .toISOString()
-      let transactionDate = '';
-      if (parsedTx.date) {
-        const dStr = parsedTx.date.trim();
-        if (dStr.length === 16) {
-          transactionDate = `${dStr}:00`;
-        } else if (dStr.length >= 19) {
-          transactionDate = dStr.slice(0, 19);
-        } else {
-          transactionDate = formatLocalISO(new Date(dStr));
-        }
-      } else {
-        transactionDate = formatLocalISO(new Date());
-      }
+      // Format transactionDate directly without wrapping in new Date() or .toISOString()
+      const txDateStr = parsedTx.date ? parsedTx.date.trim() : '';
+      const transactionDate = txDateStr.length === 16 ? `${txDateStr}:00` : txDateStr;
 
       await api.transactions.create({
         walletId: selectedWalletId,
