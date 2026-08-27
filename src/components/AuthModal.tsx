@@ -129,24 +129,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   const handleGuestDemoLogin = async () => {
+    setEmailOrUsername('user1');
+    setLoginPassword('123456');
     setIsLoading(true);
     setToastMessage(null);
 
     try {
       const user = await api.auth.login({
-        username: 'demo.user',
-        email: 'demo.user@sivi.vn',
-        password: 'demopassword123',
+        username: 'user1',
+        password: '123456',
       });
 
-      showToast('success', 'Đang đăng nhập tài khoản Dùng Thử Nhanh...');
+      showToast('success', 'Đang đăng nhập bằng Tài khoản Demo (user1)...');
 
       setTimeout(() => {
         onAuthSuccess(user);
         if (onClose) onClose();
       }, 400);
     } catch (err: any) {
-      showToast('error', err.message || 'Lỗi khi kích hoạt phiên khách');
+      showToast('error', err.message || 'Lỗi khi đăng nhập tài khoản Demo');
     } finally {
       setIsLoading(false);
     }

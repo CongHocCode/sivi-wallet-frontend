@@ -1,9 +1,26 @@
 /**
  * SIVI WALLET - Natural Language / Voice Logger Modal (Gemini NLP)
+ * Features: Category Grid selector, Wallet auto-matching, transactionDate normalization
  */
 
 import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, Sparkles, Send, Check, X, AlertCircle } from 'lucide-react';
+import {
+  Mic,
+  MicOff,
+  Sparkles,
+  Send,
+  Check,
+  X,
+  AlertCircle,
+  UtensilsCrossed,
+  Car,
+  ShoppingBag,
+  Receipt,
+  HeartPulse,
+  Wallet as WalletIcon,
+  TrendingUp,
+  Tag,
+} from 'lucide-react';
 import { api } from '../services/api';
 import { geminiService } from '../services/geminiService';
 import { NLPParsedTransaction, Wallet, Category } from '../types';
@@ -24,6 +41,49 @@ const EXAMPLES = [
   'Mua áo Uniqlo 450k bằng Tiền mặt',
 ];
 
+/** Map icon name or category name to a Lucide icon component */
+const getCategoryIcon = (iconName?: string, name?: string) => {
+  const n = (name || '').toLowerCase();
+  if (iconName === 'UtensilsCrossed' || iconName === 'Utensils' || n.includes('ăn') || n.includes('uống'))
+    return UtensilsCrossed;
+  if (iconName === 'Car' || n.includes('đi lại') || n.includes('xe')) return Car;
+  if (iconName === 'ShoppingBag' || n.includes('mua sắm') || n.includes('chợ')) return ShoppingBag;
+  if (iconName === 'Receipt' || n.includes('hóa đơn') || n.includes('điện')) return Receipt;
+  if (iconName === 'Sparkles' || n.includes('giải trí') || n.includes('phim')) return Sparkles;
+  if (iconName === 'HeartPulse' || n.includes('sức khỏe') || n.includes('thuốc')) return HeartPulse;
+  if (iconName === 'Wallet' || n.includes('lương') || n.includes('thu nhập')) return WalletIcon;
+  if (iconName === 'TrendingUp' || n.includes('thưởng') || n.includes('lãi')) return TrendingUp;
+  return Tag;
+};
+
+/** Fuzzy match a string against category names */
+const findMatchingCategory = (text: string, categories: Category[]): Category | undefined => {
+  const lower = (text || '').toLowerCase().trim();
+  if (!lower) return undefined;
+  // Exact match
+  const exact = categories.find((c) => c.name.toLowerCase() === lower);
+  if (exact) return exact;
+  // Partial includes
+  const partial = categories.find(
+    (c) => c.name.toLowerCase().includes(lower) || lower.includes(c.name.toLowerCase())
+  );
+  return partial;
+};
+
+/** Fuzzy match a string against wallet names */
+const findMatchingWallet = (text: string, wallets: Wallet[]): Wallet | undefined => {
+  const lower = (text || '').toLowerCase().trim();
+  if (!lower) return undefined;
+  const exact = wallets.find((w) => w.name.toLowerCase() === lower);
+  if (exact) return exact;
+  const partial = wallets.find(
+    (w) =>
+      w.name.toLowerCase().includes(lower) ||
+      lower.includes(w.name.toLowerCase())
+  );
+  return partial;
+};
+
 export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
   isOpen,
   onClose,
@@ -34,15 +94,26 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
   const [prompt, setPrompt] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [parsedTx, setParsedTx] = useState<NLPParsedTransaction | null>(null);
   const [selectedWalletId, setSelectedWalletId] = useState<string>('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+
+  const safeWallets = Array.isArray(wallets) ? wallets : [];
+  const safeCategories = Array.isArray(categories) ? categories : [];
 
   useEffect(() => {
-    if (wallets.length > 0) {
-      setSelectedWalletId(wallets[0].id);
+    if (safeWallets.length > 0 && !selectedWalletId) {
+      setSelectedWalletId(safeWallets[0].id);
     }
   }, [wallets]);
+
+  useEffect(() => {
+    if (safeCategories.length > 0 && !selectedCategoryId) {
+      setSelectedCategoryId(safeCategories[0].id);
+    }
+  }, [categories]);
 
   const updateParsedTx = (field: keyof NLPParsedTransaction, value: any) => {
     if (!parsedTx) return;
@@ -113,11 +184,17 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
       };
       setParsedTx(mappedResult);
 
-      // Try matching wallet
+      // Auto-match category from Gemini result
+      if (mappedResult.category) {
+        const matchedCat = findMatchingCategory(mappedResult.category, safeCategories);
+        if (matchedCat) {
+          setSelectedCategoryId(matchedCat.id);
+        }
+      }
+
+      // Auto-match wallet from Gemini result
       if (mappedResult.walletName) {
-        const matchedWallet = wallets.find((w) =>
-          w.name.toLowerCase().includes(mappedResult.walletName.toLowerCase())
-        );
+        const matchedWallet = findMatchingWallet(mappedResult.walletName, safeWallets);
         if (matchedWallet) {
           setSelectedWalletId(matchedWallet.id);
         }
@@ -133,31 +210,41 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
   const handleSave = async () => {
     if (!parsedTx || !selectedWalletId) return;
 
+    setIsSaving(true);
+    setError(null);
+
     try {
-      const wallet = wallets.find((w) => w.id === selectedWalletId);
-      const cat = categories.find((c) => c.name.toLowerCase().includes(parsedTx.category.toLowerCase())) || categories[0];
+      const wallet = safeWallets.find((w) => w.id === selectedWalletId);
+      const cat = safeCategories.find((c) => c.id === selectedCategoryId) || safeCategories[0];
 
       let finalNote = parsedTx.note;
       if (parsedTx.splitWith && parsedTx.splitWith.length > 0) {
         finalNote += ` (Chia với: ${parsedTx.splitWith.join(', ')})`;
       }
 
+      const transactionDate = new Date(parsedTx.date || Date.now()).toISOString().slice(0, 19);
+
       await api.transactions.create({
         walletId: selectedWalletId,
         walletName: wallet?.name,
-        categoryId: cat.id,
-        categoryName: cat.name,
-        categoryIcon: cat.icon,
+        categoryId: cat?.id,
+        categoryName: cat?.name || 'Chi tiêu',
+        categoryIcon: cat?.icon || 'Tag',
         amount: parsedTx.amount,
         type: parsedTx.type || 'EXPENSE',
         note: finalNote,
-        date: parsedTx.date || new Date().toISOString(),
+        date: transactionDate,
+        transactionDate,
       });
 
       onSuccess();
       onClose();
-    } catch (err) {
-      setError('Không thể lưu giao dịch. Vui lòng thử lại.');
+    } catch (err: any) {
+      // Keep modal open on error – show API error message
+      const apiMsg = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi lưu giao dịch';
+      setError(apiMsg);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -172,7 +259,7 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-extrabold text-[#2D2926]">Nhập Bằng Giọng Nói / Câu Tự Nhiên</h2>
-              <p className="text-xs text-[#8C857D]">Tự động phân tích số tiền, ví & danh mục</p>
+              <p className="text-xs text-[#8C857D]">Tự động phân tích số tiền, ví &amp; danh mục</p>
             </div>
           </div>
           <button
@@ -304,23 +391,55 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
                     className="w-full mt-0.5 p-2 text-xs font-bold rounded-xl bg-white border border-[#EAE7DC] text-[#D98B72] focus:outline-none focus:ring-1 focus:ring-[#7D8F69]"
                   />
                 </div>
-                <div>
-                  <span className="text-[#8C857D] font-bold block text-[11px]">Danh mục:</span>
-                  <input
-                    type="text"
-                    value={parsedTx.category}
-                    onChange={(e) => updateParsedTx('category', e.target.value)}
-                    className="w-full mt-0.5 p-2 text-xs font-semibold rounded-xl bg-white border border-[#EAE7DC] text-[#2D2926] focus:outline-none focus:ring-1 focus:ring-[#7D8F69]"
-                  />
+
+                {/* Category Grid Icon Selector */}
+                <div className="col-span-2">
+                  <span className="text-[#8C857D] font-bold block text-[11px] mb-1.5">Chọn danh mục:</span>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {safeCategories.map((cat) => {
+                      const IconComp = getCategoryIcon(cat.icon, cat.name);
+                      const isSelected = selectedCategoryId === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategoryId(cat.id);
+                            updateParsedTx('category', cat.name);
+                          }}
+                          className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all text-center ${
+                            isSelected
+                              ? 'bg-[#7D8F69]/15 border-[#7D8F69] ring-1 ring-[#7D8F69]/40 shadow-sm'
+                              : 'bg-white border-[#EAE7DC] hover:bg-[#F9F8F3] hover:border-[#8C857D]/30'
+                          }`}
+                          title={cat.name}
+                        >
+                          <IconComp
+                            className={`w-4 h-4 ${
+                              isSelected ? 'text-[#7D8F69]' : 'text-[#8C857D]'
+                            }`}
+                          />
+                          <span
+                            className={`text-[9px] font-bold leading-tight line-clamp-1 ${
+                              isSelected ? 'text-[#7D8F69]' : 'text-[#8C857D]'
+                            }`}
+                          >
+                            {cat.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div>
+
+                <div className="col-span-2">
                   <span className="text-[#8C857D] font-bold block text-[11px]">Chọn ví ghi nhận:</span>
                   <select
                     value={selectedWalletId}
                     onChange={(e) => setSelectedWalletId(e.target.value)}
                     className="w-full mt-0.5 p-2 text-xs font-bold rounded-xl bg-white border border-[#EAE7DC] text-[#2D2926] focus:outline-none focus:ring-1 focus:ring-[#7D8F69]"
                   >
-                    {wallets.map((w) => (
+                    {safeWallets.map((w) => (
                       <option key={w.id} value={w.id}>
                         {w.name} ({formatVND(w.balance)})
                       </option>
@@ -353,9 +472,18 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
           {parsedTx && (
             <button
               onClick={handleSave}
-              className="px-5 py-2.5 text-xs font-extrabold text-white bg-[#7D8F69] hover:bg-[#687856] rounded-xl shadow-xs flex items-center gap-2 transition"
+              disabled={isSaving}
+              className="px-5 py-2.5 text-xs font-extrabold text-white bg-[#7D8F69] hover:bg-[#687856] disabled:opacity-50 rounded-xl shadow-xs flex items-center gap-2 transition"
             >
-              <Check className="w-4 h-4" /> Xác Nhận & Lưu
+              {isSaving ? (
+                <>
+                  <Sparkles className="w-4 h-4 animate-spin" /> Đang lưu...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" /> Xác Nhận & Lưu
+                </>
+              )}
             </button>
           )}
         </div>

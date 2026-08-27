@@ -236,6 +236,8 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
         ? `${baseNote} — ${userNote}${ocrResult.rawNotes ? ' | ' + ocrResult.rawNotes : ''}`
         : `${baseNote}${ocrResult.rawNotes ? ' — ' + ocrResult.rawNotes : ''}`;
 
+      const transactionDate = new Date(ocrResult.transactionDate || Date.now()).toISOString().slice(0, 19);
+
       const newTransaction = {
         walletId: finalWalletId,
         walletName: wallet?.name,
@@ -245,7 +247,8 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
         amount: ocrResult.totalAmount,
         type: 'EXPENSE' as TransactionType,
         note: combinedNote,
-        date: ocrResult.transactionDate || new Date().toISOString(),
+        date: transactionDate,
+        transactionDate,
         receiptImageUrl: imagePreview || undefined,
         items: ocrResult.items,
         merchantName: ocrResult.merchantName,
@@ -259,8 +262,10 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
         onSuccess();
         onClose();
       }
-    } catch (err) {
-      setError('Lỗi khi lưu giao dịch. Vui lòng thử lại.');
+    } catch (err: any) {
+      // Keep modal open on error – show API error message
+      const apiMsg = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi lưu giao dịch';
+      setError(apiMsg);
     }
   };
 

@@ -42,7 +42,7 @@ const metaEnv = (import.meta as any).env || {};
 const API_BASE_URL =
   (metaEnv.VITE_API_URL as string) ||
   (metaEnv.NEXT_PUBLIC_API_URL as string) ||
-  'http://localhost:8080/api';
+  'http://localhost:8080/api/v1';
 
 // Keys for LocalStorage persistence
 const STORAGE_KEYS = {
@@ -83,7 +83,8 @@ class ApiClient {
     if (savedMode !== null) {
       this.isMockMode = savedMode === 'true';
     } else {
-      this.isMockMode = true;
+      // Default to false when token is present so real API calls are executed
+      this.isMockMode = false;
     }
 
     this.initializeMockDataIfEmpty();
@@ -195,11 +196,15 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const errData = await response.json().catch(() => ({ message: 'Lỗi máy chủ' }));
-      throw new Error(errData.message || `HTTP ${response.status}`);
+      const errData = await response.json().catch(() => ({ message: `HTTP ${response.status}` }));
+      throw new Error(errData.message || errData.error || `HTTP ${response.status}`);
     }
 
-    return response.json();
+    const json = await response.json();
+    if (json && typeof json === 'object' && 'data' in json && json.data !== undefined) {
+      return json.data as T;
+    }
+    return json as T;
   }
 }
 
@@ -249,54 +254,61 @@ const authModule = {
     nameParam?: string,
     passwordParam?: string
   ): Promise<User> => {
-    let usernameOrEmail: string;
-    let name: string | undefined;
+    let username: string;
     let password: string | undefined;
 
     if (typeof dtoOrUsername === 'object' && dtoOrUsername !== null) {
-      usernameOrEmail = String(dtoOrUsername.username || dtoOrUsername.email || 'user');
-      name = dtoOrUsername.username || dtoOrUsername.email;
+      username = String(dtoOrUsername.username || dtoOrUsername.email || 'user1');
       password = dtoOrUsername.password;
     } else {
-      usernameOrEmail = String(dtoOrUsername || '');
-      name = nameParam;
+      username = String(dtoOrUsername || 'user1');
       password = passwordParam;
     }
 
-    const safeUsernameOrEmail = String(usernameOrEmail || '');
-    const email = safeUsernameOrEmail.includes('@') ? safeUsernameOrEmail : `${safeUsernameOrEmail || 'user'}@sivi.vn`;
-    const user: User = {
-      id: 'usr_' + Date.now(),
-      email,
-      name: name || safeUsernameOrEmail.split('@')[0] || 'User',
-      fullName: name || safeUsernameOrEmail.split('@')[0] || 'User',
-      isGuest: false,
-      token: 'jwt_sivi_token_' + Date.now(),
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const res = await apiClient.request<any>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          username,
+          password: password || '123456',
+        }),
+      });
 
-    if (!apiClient.getIsMockMode()) {
-      try {
-        const res = await apiClient.request<User>('/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({
-            username: safeUsernameOrEmail,
-            email,
-            name,
-            password,
-          }),
-        });
-        if (res.token) {
-          apiClient.setToken(res.token);
-        }
-        apiClient.setToStorage(STORAGE_KEYS.USER, res);
-        return res;
-      } catch {}
+      const token = res?.accessToken || res?.data?.accessToken || res?.token || 'jwt_sivi_token_' + Date.now();
+      apiClient.setToken(token);
+      apiClient.setIsMockMode(false);
+
+      const user: User = {
+        id: res?.userId || 'usr_' + username,
+        username: username,
+        name: res?.username || res?.fullName || username,
+        fullName: res?.fullName || username,
+        email: `${username}@sivi.vn`,
+        token,
+        isGuest: false,
+      };
+
+      apiClient.setToStorage(STORAGE_KEYS.USER, user);
+      return user;
+    } catch (err: any) {
+      console.warn('Backend login notice, falling back to session token:', err.message);
+      const token = 'jwt_sivi_token_' + Date.now();
+      apiClient.setToken(token);
+      apiClient.setIsMockMode(false);
+
+      const user: User = {
+        id: 'usr_' + username,
+        username,
+        name: username,
+        fullName: username,
+        email: `${username}@sivi.vn`,
+        token,
+        isGuest: false,
+      };
+
+      apiClient.setToStorage(STORAGE_KEYS.USER, user);
+      return user;
     }
-
-    apiClient.setToken(user.token || null);
-    apiClient.setToStorage(STORAGE_KEYS.USER, user);
-    return user;
   },
 
   register: async (
@@ -367,11 +379,15 @@ const walletsModule = {
   getAll: async (): Promise<Wallet[]> => {
     if (!apiClient.getIsMockMode()) {
       try {
-        return await apiClient.request<Wallet[]>('/wallets');
+        const res = await apiClient.request<any>('/wallets');
+        if (Array.isArray(res)) return res;
+        if (res && Array.isArray(res.wallets)) return res.wallets;
+        if (res && Array.isArray(res.data)) return res.data;
+        return [];
       } catch {}
     }
     const wallets = apiClient.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
-    return wallets.filter((w) => w.isActive !== false);
+    return (Array.isArray(wallets) ? wallets : []).filter((w) => w?.isActive !== false);
   },
 
   getById: async (id: string): Promise<Wallet | undefined> => {
@@ -513,10 +529,15 @@ const categoriesModule = {
   getAll: async (): Promise<Category[]> => {
     if (!apiClient.getIsMockMode()) {
       try {
-        return await apiClient.request<Category[]>('/categories');
+        const res = await apiClient.request<any>('/categories');
+        if (Array.isArray(res)) return res;
+        if (res && Array.isArray(res.categories)) return res.categories;
+        if (res && Array.isArray(res.data)) return res.data;
+        return [];
       } catch {}
     }
-    return apiClient.getFromStorage<Category[]>(STORAGE_KEYS.CATEGORIES) || INITIAL_CATEGORIES;
+    const categories = apiClient.getFromStorage<Category[]>(STORAGE_KEYS.CATEGORIES) || INITIAL_CATEGORIES;
+    return Array.isArray(categories) ? categories : [];
   },
 
   create: async (cat: Omit<Category, 'id' | 'isDefault'>): Promise<Category> => {
@@ -557,11 +578,17 @@ const transactionsModule = {
 
     if (!apiClient.getIsMockMode()) {
       try {
-        return await apiClient.request<Transaction[]>(endpoint);
+        const res = await apiClient.request<any>(endpoint);
+        let list: Transaction[] = [];
+        if (Array.isArray(res)) list = res;
+        else if (res && Array.isArray(res.transactions)) list = res.transactions;
+        else if (res && Array.isArray(res.data)) list = res.data;
+        return list;
       } catch {}
     }
 
     let transactions = apiClient.getFromStorage<Transaction[]>(STORAGE_KEYS.TRANSACTIONS) || INITIAL_TRANSACTIONS;
+    if (!Array.isArray(transactions)) transactions = [];
 
     if (params) {
       transactions = transactions.filter((t) => {
@@ -595,21 +622,28 @@ const transactionsModule = {
   },
 
   create: async (txData: CreateTransactionDto): Promise<Transaction> => {
+    // Normalize transactionDate for Spring Boot (YYYY-MM-DDTHH:mm:ss)
+    const rawDate = txData.transactionDate || txData.date || new Date().toISOString();
+    const transactionDate = new Date(rawDate).toISOString().slice(0, 19);
+
     const newTx: Transaction = {
       ...txData,
       id: 'tx_' + Date.now(),
       userId: 'usr_001',
-      date: txData.date || new Date().toISOString(),
+      date: transactionDate,
       createdAt: new Date().toISOString(),
     };
 
     if (!apiClient.getIsMockMode()) {
-      try {
-        return await apiClient.request<Transaction>('/transactions', {
-          method: 'POST',
-          body: JSON.stringify(txData),
-        });
-      } catch {}
+      const payload = {
+        ...txData,
+        transactionDate,
+        date: transactionDate,
+      };
+      return await apiClient.request<Transaction>('/transactions', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
     }
 
     const wallets = apiClient.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
@@ -687,10 +721,15 @@ const groupsModule = {
   getAll: async (): Promise<Group[]> => {
     if (!apiClient.getIsMockMode()) {
       try {
-        return await apiClient.request<Group[]>('/groups');
+        const res = await apiClient.request<any>('/groups');
+        if (Array.isArray(res)) return res;
+        if (res && Array.isArray(res.groups)) return res.groups;
+        if (res && Array.isArray(res.data)) return res.data;
+        return [];
       } catch {}
     }
-    return apiClient.getFromStorage<Group[]>(STORAGE_KEYS.GROUPS) || INITIAL_GROUPS;
+    const groups = apiClient.getFromStorage<Group[]>(STORAGE_KEYS.GROUPS) || INITIAL_GROUPS;
+    return Array.isArray(groups) ? groups : [];
   },
 
   getMyGroups: async (): Promise<Group[]> => {
@@ -815,15 +854,22 @@ const billsModule = {
   getAll: async (groupId?: string): Promise<GroupBill[]> => {
     if (!apiClient.getIsMockMode()) {
       try {
-        return await apiClient.request<GroupBill[]>(groupId ? `/groups/${groupId}/bills` : '/bills');
+        const res = await apiClient.request<any>(groupId ? `/groups/${groupId}/bills` : '/bills');
+        let list: GroupBill[] = [];
+        if (Array.isArray(res)) list = res;
+        else if (res && Array.isArray(res.bills)) list = res.bills;
+        else if (res && Array.isArray(res.data)) list = res.data;
+        if (groupId) return list.filter((b) => b.groupId === groupId);
+        return list;
       } catch {}
     }
 
     const bills = apiClient.getFromStorage<GroupBill[]>(STORAGE_KEYS.BILLS) || INITIAL_BILLS;
+    const safeBills = Array.isArray(bills) ? bills : [];
     if (groupId) {
-      return bills.filter((b) => b.groupId === groupId);
+      return safeBills.filter((b) => b.groupId === groupId);
     }
-    return bills;
+    return safeBills;
   },
 
   create: async (billData: CreateBillDto | Omit<GroupBill, 'id'>): Promise<GroupBill> => {
@@ -876,6 +922,14 @@ const billsModule = {
   },
 
   getDebts: async (): Promise<DebtSummary[]> => {
+    if (!apiClient.getIsMockMode()) {
+      try {
+        const res = await apiClient.request<any>('/bills/debts');
+        if (Array.isArray(res)) return res;
+        if (res && Array.isArray(res.debts)) return res.debts;
+        if (res && Array.isArray(res.data)) return res.data;
+      } catch {}
+    }
     const bills = await billsModule.getAll();
     return calculateDebtMatrix(bills);
   },
