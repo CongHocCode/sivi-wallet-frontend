@@ -75,26 +75,26 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#2D2926]/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl overflow-hidden border border-[#EAE7DC] max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <WalletIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /> Thêm Ví / Tài Khoản Mới
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#EAE7DC] bg-[#F9F8F3] shrink-0">
+          <h2 className="text-sm font-extrabold text-[#2D2926] flex items-center gap-2">
+            <WalletIcon className="w-5 h-5 text-[#7D8F69]" /> Thêm Ví / Tài Khoản Mới
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            className="p-1.5 rounded-full text-[#8C857D] hover:text-[#2D2926] hover:bg-[#EAE7DC] transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
           {/* Wallet Type Selection */}
           <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">
+            <label className="text-xs font-bold text-[#4A443F] block mb-2">
               Loại ví / tài khoản:
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -104,13 +104,13 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
                   setType('BANK');
                   setName('Vietcombank');
                 }}
-                className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 text-xs font-bold transition ${
+                className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 text-xs font-bold transition ${
                   type === 'BANK'
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
-                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                    ? 'border-[#7D8F69] bg-[#7D8F69]/10 text-[#2D2926] ring-1 ring-[#7D8F69]'
+                    : 'border-[#EAE7DC] bg-[#F9F8F3] text-[#8C857D] hover:bg-[#F1EFE7]'
                 }`}
               >
-                <Building2 className="w-5 h-5" /> Ngân Hàng
+                <Building2 className="w-5 h-5 text-[#7D8F69]" /> Ngân Hàng
               </button>
 
               <button
@@ -119,13 +119,13 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
                   setType('E_WALLET');
                   setName('Ví MoMo');
                 }}
-                className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 text-xs font-bold transition ${
+                className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 text-xs font-bold transition ${
                   type === 'E_WALLET'
-                    ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400'
-                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                    ? 'border-[#D98B72] bg-[#D98B72]/10 text-[#2D2926] ring-1 ring-[#D98B72]'
+                    : 'border-[#EAE7DC] bg-[#F9F8F3] text-[#8C857D] hover:bg-[#F1EFE7]'
                 }`}
               >
-                <Smartphone className="w-5 h-5" /> Ví Điện Tử
+                <Smartphone className="w-5 h-5 text-[#D98B72]" /> Ví Điện Tử
               </button>
 
               <button
@@ -134,13 +134,13 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
                   setType('CASH');
                   setName('Tiền Mặt');
                 }}
-                className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 text-xs font-bold transition ${
+                className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 text-xs font-bold transition ${
                   type === 'CASH'
-                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
-                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                    ? 'border-[#4A443F] bg-[#4A443F]/10 text-[#2D2926] ring-1 ring-[#4A443F]'
+                    : 'border-[#EAE7DC] bg-[#F9F8F3] text-[#8C857D] hover:bg-[#F1EFE7]'
                 }`}
               >
-                <Banknote className="w-5 h-5" /> Tiền Mặt
+                <Banknote className="w-5 h-5 text-[#4A443F]" /> Tiền Mặt
               </button>
             </div>
           </div>
@@ -148,7 +148,7 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
           {/* Quick presets */}
           {type === 'BANK' && (
             <div>
-              <span className="text-[11px] text-slate-400 font-semibold block mb-1">Gợi ý Ngân hàng:</span>
+              <span className="text-[11px] text-[#8C857D] font-bold block mb-1">Gợi ý Ngân hàng:</span>
               <div className="flex flex-wrap gap-1.5">
                 {PRESET_BANKS.map((b) => (
                   <button
@@ -158,7 +158,7 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
                       setBankName(b);
                       setName(b);
                     }}
-                    className="px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-blue-100 dark:hover:bg-blue-900"
+                    className="px-2.5 py-1 text-xs rounded-xl bg-[#F9F8F3] border border-[#EAE7DC] text-[#4A443F] font-semibold hover:bg-[#EAE7DC] transition"
                   >
                     {b}
                   </button>
@@ -169,14 +169,14 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
 
           {type === 'E_WALLET' && (
             <div>
-              <span className="text-[11px] text-slate-400 font-semibold block mb-1">Gợi ý Ví điện tử:</span>
+              <span className="text-[11px] text-[#8C857D] font-bold block mb-1">Gợi ý Ví điện tử:</span>
               <div className="flex flex-wrap gap-1.5">
                 {PRESET_EWALLETS.map((w) => (
                   <button
                     key={w}
                     type="button"
                     onClick={() => setName(w)}
-                    className="px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-pink-100 dark:hover:bg-pink-900"
+                    className="px-2.5 py-1 text-xs rounded-xl bg-[#F9F8F3] border border-[#EAE7DC] text-[#4A443F] font-semibold hover:bg-[#EAE7DC] transition"
                   >
                     {w}
                   </button>
@@ -187,7 +187,7 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
 
           {/* Wallet Name */}
           <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+            <label className="text-xs font-bold text-[#4A443F] block mb-1">
               Tên gợi nhớ ví:
             </label>
             <input
@@ -195,13 +195,13 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ví dụ: Vietcombank Lương, MoMo Chi Tiêu..."
-              className="w-full p-2.5 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+              className="w-full p-2.5 text-xs font-semibold rounded-2xl border border-[#EAE7DC] bg-[#F9F8F3] text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"
             />
           </div>
 
           {/* Initial Balance */}
           <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+            <label className="text-xs font-bold text-[#4A443F] block mb-1">
               Số dư ban đầu:
             </label>
             <div className="relative">
@@ -210,9 +210,9 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
                 value={balanceInput}
                 onChange={(e) => setBalanceInput(e.target.value)}
                 placeholder="0 hoặc 5tr, 500k..."
-                className="w-full p-2.5 text-sm font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                className="w-full p-2.5 text-sm font-bold rounded-2xl border border-[#EAE7DC] bg-[#F9F8F3] text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"
               />
-              <span className="absolute right-3 top-2.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+              <span className="absolute right-3 top-2.5 text-xs font-bold text-[#7D8F69]">
                 = {formatVND(parsedBalance)}
               </span>
             </div>
@@ -221,7 +221,7 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
           {/* Account Number */}
           {type !== 'CASH' && (
             <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+              <label className="text-xs font-bold text-[#4A443F] block mb-1">
                 Số tài khoản / Số điện thoại ví:
               </label>
               <input
@@ -229,25 +229,25 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
                 placeholder="1012398765..."
-                className="w-full p-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                className="w-full p-2.5 text-xs rounded-2xl border border-[#EAE7DC] bg-[#F9F8F3] text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"
               />
             </div>
           )}
 
-          {error && <p className="text-xs font-semibold text-rose-500">{error}</p>}
+          {error && <p className="text-xs font-bold text-[#D98B72]">{error}</p>}
 
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+              className="px-4 py-2 text-xs font-bold text-[#8C857D] hover:bg-[#F9F8F3] rounded-xl transition"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-lg shadow-emerald-600/20"
+              className="px-5 py-2.5 text-xs font-extrabold text-white bg-[#7D8F69] hover:bg-[#687856] rounded-xl shadow-xs transition"
             >
               {isSubmitting ? 'Đang tạo...' : 'Tạo Ví Mới'}
             </button>

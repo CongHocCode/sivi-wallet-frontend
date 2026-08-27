@@ -34,27 +34,27 @@ export const GroupDebtDetailModal: React.FC<GroupDebtDetailModalProps> = ({
   const groupBills = bills.filter((b) => b.groupId === group.id);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D2926]/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-white rounded-[28px] shadow-2xl overflow-hidden border border-[#EAE7DC] flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#2D2926]/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl overflow-hidden border border-[#EAE7DC] flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#EAE7DC] bg-[#F1EFE7]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#EAE7DC] bg-[#F9F8F3]">
           <div>
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-[#7D8F69]" />
-              <h2 className="text-base font-bold text-[#2D2926]">{group.name}</h2>
+              <h2 className="text-sm font-extrabold text-[#2D2926]">{group.name}</h2>
             </div>
-            <p className="text-xs text-[#8C857D] mt-0.5">Chi tiết các khoản nợ & hóa đơn nhóm</p>
+            <p className="text-[11px] text-[#8C857D] mt-0.5">Chi tiết các khoản nợ & hóa đơn nhóm</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-[#8C857D] hover:text-[#2D2926] hover:bg-white transition"
+            className="p-1.5 rounded-full text-[#8C857D] hover:text-[#2D2926] hover:bg-[#EAE7DC] transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
           {/* Group Overview Stats */}
           <div className="p-4 rounded-2xl bg-[#F9F8F3] border border-[#EAE7DC] flex items-center justify-between">
             <div>

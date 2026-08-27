@@ -162,32 +162,32 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#2D2926]/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl overflow-hidden border border-[#EAE7DC] flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#EAE7DC] bg-[#F9F8F3] shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="p-2 rounded-2xl bg-[#7D8F69]/15 text-[#7D8F69]">
               <Sparkles className="w-5 h-5 animate-pulse" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Nhập Liệu Tiếng Việt / Giọng Nói</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Tự động phân tích số tiền, ví & danh mục bằng AI</p>
+              <h2 className="text-base font-extrabold text-[#2D2926]">Nhập Bằng Giọng Nói / Câu Tự Nhiên</h2>
+              <p className="text-xs text-[#8C857D]">Tự động phân tích số tiền, ví & danh mục</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="p-1.5 rounded-full text-[#8C857D] hover:text-[#2D2926] hover:bg-[#EAE7DC] transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5">
+        <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {/* Input box + Voice button */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+            <label className="text-xs font-bold text-[#4A443F] uppercase tracking-wider block">
               Nói hoặc gõ câu chi tiêu bất kỳ:
             </label>
             <div className="relative flex items-center">
@@ -195,15 +195,15 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder='Ví dụ: "Sáng nay ăn bún bò 45k bằng MoMo với Nam"...'
-                className="w-full p-3.5 pr-12 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none min-h-[90px] resize-none"
+                className="w-full p-3.5 pr-12 text-sm font-medium rounded-2xl border border-[#EAE7DC] bg-[#F9F8F3] text-[#2D2926] placeholder:text-[#8C857D] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none min-h-[90px] resize-none"
               />
               <button
                 type="button"
                 onClick={toggleVoiceRecording}
-                className={`absolute right-3 top-3 p-2.5 rounded-xl transition-all shadow-md ${
+                className={`absolute right-3 top-3 p-2.5 rounded-2xl transition-all shadow-xs ${
                   isRecording
-                    ? 'bg-rose-500 text-white animate-bounce ring-4 ring-rose-200 dark:ring-rose-900'
-                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    ? 'bg-[#D98B72] text-white animate-bounce ring-4 ring-[#D98B72]/20'
+                    : 'bg-[#7D8F69] hover:bg-[#687856] text-white'
                 }`}
                 title={isRecording ? 'Đang lắng nghe tiếng Việt...' : 'Nói trực tiếp bằng giọng nói'}
               >
@@ -211,8 +211,8 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
               </button>
             </div>
             {isRecording && (
-              <p className="text-xs font-bold text-rose-500 animate-pulse flex items-center gap-1.5 pt-1">
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+              <p className="text-xs font-bold text-[#D98B72] animate-pulse flex items-center gap-1.5 pt-1">
+                <span className="w-2 h-2 rounded-full bg-[#D98B72] animate-ping"></span>
                 Đang lắng nghe giọng nói tiếng Việt... Hãy nói câu chi tiêu của bạn
               </p>
             )}
@@ -220,7 +220,7 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
 
           {/* Prompt Examples */}
           <div>
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
+            <span className="text-[11px] font-bold text-[#8C857D] uppercase tracking-wider block mb-1.5">
               Gợi ý câu mẫu thử ngay:
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -231,7 +231,7 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
                     setPrompt(ex);
                     processNLP(ex);
                   }}
-                  className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-300 text-slate-600 dark:text-slate-300 transition"
+                  className="px-2.5 py-1 text-xs font-medium rounded-xl bg-[#F9F8F3] border border-[#EAE7DC] hover:bg-[#EAE7DC] text-[#4A443F] transition"
                 >
                   "{ex}"
                 </button>
@@ -243,12 +243,12 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
           <button
             onClick={() => processNLP(prompt)}
             disabled={isLoading || !prompt.trim()}
-            className="w-full py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition"
+            className="w-full py-2.5 text-xs font-extrabold text-white bg-[#7D8F69] hover:bg-[#687856] disabled:opacity-50 rounded-2xl shadow-xs flex items-center justify-center gap-2 transition"
           >
             {isLoading ? (
               <>
-                <Sparkles className="w-4 h-4 animate-spin text-amber-300" />
-                Gemini AI đang phân tích...
+                <Sparkles className="w-4 h-4 animate-spin text-amber-200" />
+                AI đang phân tích...
               </>
             ) : (
               <>
@@ -259,7 +259,7 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
 
           {/* Error */}
           {error && (
-            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+            <div className="p-3.5 rounded-2xl bg-[#D98B72]/10 border border-[#D98B72]/30 text-[#D98B72] text-xs flex items-center gap-2 font-bold">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -267,17 +267,17 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
 
           {/* Parsed Result Preview */}
           {parsedTx && !isLoading && (
-            <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-3 animate-in fade-in">
-              <div className="flex items-center justify-between pb-2 border-b border-emerald-200/60 dark:border-emerald-800/50">
-                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
-                  Kết quả phân tích Gemini AI:
+            <div className="p-4 rounded-2xl bg-[#F9F8F3] border border-[#EAE7DC] space-y-3 animate-in fade-in">
+              <div className="flex items-center justify-between pb-2 border-b border-[#EAE7DC]">
+                <span className="text-xs font-extrabold text-[#7D8F69] uppercase tracking-wider">
+                  Kết quả phân tích AI:
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-semibold text-slate-500">Loại:</span>
+                  <span className="text-[10px] font-bold text-[#8C857D]">Loại:</span>
                   <select
                     value={parsedTx.type}
                     onChange={(e) => updateParsedTx('type', e.target.value)}
-                    className="p-1 text-[10px] font-extrabold uppercase rounded bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 focus:outline-none"
+                    className="p-1 text-[10px] font-extrabold uppercase rounded-lg bg-white border border-[#EAE7DC] text-[#2D2926] focus:outline-none"
                   >
                     <option value="EXPENSE">Khoản chi</option>
                     <option value="INCOME">Khoản thu</option>
@@ -287,38 +287,38 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
 
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Nội dung:</span>
+                  <span className="text-[#8C857D] font-bold block text-[11px]">Nội dung:</span>
                   <input
                     type="text"
                     value={parsedTx.note}
                     onChange={(e) => updateParsedTx('note', e.target.value)}
-                    className="w-full mt-0.5 p-1.5 text-xs font-semibold rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full mt-0.5 p-2 text-xs font-semibold rounded-xl bg-white border border-[#EAE7DC] text-[#2D2926] focus:outline-none focus:ring-1 focus:ring-[#7D8F69]"
                   />
                 </div>
                 <div>
-                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Số tiền (đ):</span>
+                  <span className="text-[#8C857D] font-bold block text-[11px]">Số tiền:</span>
                   <input
                     type="number"
                     value={parsedTx.amount}
                     onChange={(e) => updateParsedTx('amount', Number(e.target.value))}
-                    className="w-full mt-0.5 p-1.5 text-xs font-bold rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-emerald-600 dark:text-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full mt-0.5 p-2 text-xs font-bold rounded-xl bg-white border border-[#EAE7DC] text-[#D98B72] focus:outline-none focus:ring-1 focus:ring-[#7D8F69]"
                   />
                 </div>
                 <div>
-                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Danh mục:</span>
+                  <span className="text-[#8C857D] font-bold block text-[11px]">Danh mục:</span>
                   <input
                     type="text"
                     value={parsedTx.category}
                     onChange={(e) => updateParsedTx('category', e.target.value)}
-                    className="w-full mt-0.5 p-1.5 text-xs font-semibold rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full mt-0.5 p-2 text-xs font-semibold rounded-xl bg-white border border-[#EAE7DC] text-[#2D2926] focus:outline-none focus:ring-1 focus:ring-[#7D8F69]"
                   />
                 </div>
                 <div>
-                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Chọn ví ghi nhận:</span>
+                  <span className="text-[#8C857D] font-bold block text-[11px]">Chọn ví ghi nhận:</span>
                   <select
                     value={selectedWalletId}
                     onChange={(e) => setSelectedWalletId(e.target.value)}
-                    className="w-full mt-0.5 p-1.5 text-xs font-semibold rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full mt-0.5 p-2 text-xs font-bold rounded-xl bg-white border border-[#EAE7DC] text-[#2D2926] focus:outline-none focus:ring-1 focus:ring-[#7D8F69]"
                   >
                     {wallets.map((w) => (
                       <option key={w.id} value={w.id}>
@@ -328,13 +328,13 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Chia tiền với (dùng dấu phẩy ngăn cách):</span>
+                  <span className="text-[#8C857D] font-bold block text-[11px]">Chia tiền với (dấu phẩy ngăn cách):</span>
                   <input
                     type="text"
                     value={parsedTx.splitWith ? parsedTx.splitWith.join(', ') : ''}
                     onChange={(e) => updateParsedTx('splitWith', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
                     placeholder="Ví dụ: Nam, An"
-                    className="w-full mt-0.5 p-1.5 text-xs font-semibold rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full mt-0.5 p-2 text-xs font-semibold rounded-xl bg-white border border-[#EAE7DC] text-[#2D2926] focus:outline-none focus:ring-1 focus:ring-[#7D8F69]"
                   />
                 </div>
               </div>
@@ -343,17 +343,17 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-[#EAE7DC] bg-[#F9F8F3] shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
+            className="px-4 py-2 text-xs font-bold text-[#8C857D] hover:bg-[#EAE7DC] rounded-xl transition"
           >
             Hủy
           </button>
           {parsedTx && (
             <button
               onClick={handleSave}
-              className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition"
+              className="px-5 py-2.5 text-xs font-extrabold text-white bg-[#7D8F69] hover:bg-[#687856] rounded-xl shadow-xs flex items-center gap-2 transition"
             >
               <Check className="w-4 h-4" /> Xác Nhận & Lưu
             </button>

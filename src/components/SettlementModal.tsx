@@ -57,23 +57,23 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D2926]/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md bg-white rounded-[28px] shadow-2xl overflow-hidden border border-[#EAE7DC]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#2D2926]/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl overflow-hidden border border-[#EAE7DC]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#EAE7DC] bg-[#F1EFE7]">
-          <h2 className="text-base font-bold text-[#2D2926] flex items-center gap-2">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#EAE7DC] bg-[#F9F8F3]">
+          <h2 className="text-sm font-extrabold text-[#2D2926] flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-[#7D8F69]" /> Xác Nhận Thanh Toán Khoản Nợ
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-[#8C857D] hover:text-[#2D2926] hover:bg-white transition"
+            className="p-1.5 rounded-full text-[#8C857D] hover:text-[#2D2926] hover:bg-[#EAE7DC] transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-5">
+        <div className="p-5 sm:p-6 space-y-4">
           {/* Debt Summary Box */}
           <div className="p-4 rounded-2xl bg-[#F9F8F3] border border-[#EAE7DC] space-y-3">
             <span className="text-[11px] font-bold text-[#8C857D] uppercase tracking-wider block">

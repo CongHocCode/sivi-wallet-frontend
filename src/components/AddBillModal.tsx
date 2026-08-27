@@ -118,30 +118,30 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#2D2926]/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl overflow-hidden border border-[#EAE7DC] max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Receipt className="w-5 h-5 text-amber-500" /> Thêm Hóa Đơn / Kèo Chia Tiền Nhóm
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#EAE7DC] bg-[#F9F8F3] shrink-0">
+          <h2 className="text-sm font-extrabold text-[#2D2926] flex items-center gap-2">
+            <Receipt className="w-5 h-5 text-[#D98B72]" /> Thêm Hóa Đơn Chia Tiền Nhóm
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            className="p-1.5 rounded-full text-[#8C857D] hover:text-[#2D2926] hover:bg-[#EAE7DC] transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
           {/* Select Group */}
           <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Chọn Nhóm:</label>
+            <label className="text-xs font-bold text-[#4A443F] block mb-1">Chọn Nhóm:</label>
             <select
               value={groupId}
               onChange={(e) => setGroupId(e.target.value)}
-              className="w-full p-2.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+              className="w-full p-2.5 text-xs font-bold rounded-2xl border border-[#EAE7DC] bg-[#F9F8F3] text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"
             >
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>
@@ -153,19 +153,19 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
 
           {/* Bill Title */}
           <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Nội dung chi tiêu:</label>
+            <label className="text-xs font-bold text-[#4A443F] block mb-1">Nội dung chi tiêu:</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ví dụ: Ăn lẩu lươn, Xe khách Đà Lạt, Tiền phòng..."
-              className="w-full p-2.5 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+              className="w-full p-2.5 text-xs font-semibold rounded-2xl border border-[#EAE7DC] bg-[#F9F8F3] text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"
             />
           </div>
 
           {/* Total Amount */}
           <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+            <label className="text-xs font-bold text-[#4A443F] block mb-1">
               Tổng số tiền hóa đơn (Hỗ trợ nhập 840k, 1.2tr):
             </label>
             <div className="relative">
@@ -174,9 +174,9 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                 value={totalAmountInput}
                 onChange={(e) => setTotalAmountInput(e.target.value)}
                 placeholder="840k hoặc 1200000..."
-                className="w-full p-3 text-lg font-black rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                className="w-full p-3 text-lg font-black rounded-2xl border border-[#EAE7DC] bg-[#F9F8F3] text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"
               />
-              <span className="absolute right-3 top-3.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+              <span className="absolute right-3 top-3.5 text-xs font-bold text-[#D98B72]">
                 = {formatVND(totalAmount)}
               </span>
             </div>
@@ -184,13 +184,13 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
 
           {/* Single Payer Selection */}
           <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-              Ai là người đã ứng tiền trước (Single Payer)?
+            <label className="text-xs font-bold text-[#4A443F] block mb-1">
+              Ai là người đã ứng tiền trước (Người trả)?
             </label>
             <select
               value={payerMemberId}
               onChange={(e) => setPayerMemberId(e.target.value)}
-              className="w-full p-2.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+              className="w-full p-2.5 text-xs font-bold rounded-2xl border border-[#EAE7DC] bg-[#F9F8F3] text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"
             >
               {currentGroup.members.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -202,17 +202,17 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
 
           {/* Split Method Toggle */}
           <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
+            <label className="text-xs font-bold text-[#4A443F] block mb-1.5">
               Hình thức chia tiền:
             </label>
-            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#F9F8F3] rounded-2xl border border-[#EAE7DC]">
               <button
                 type="button"
                 onClick={() => setSplitType('EQUAL')}
-                className={`py-2 text-xs font-bold rounded-lg transition ${
+                className={`py-2 text-xs font-bold rounded-xl transition ${
                   splitType === 'EQUAL'
-                    ? 'bg-amber-500 text-white shadow'
-                    : 'text-slate-600 dark:text-slate-400'
+                    ? 'bg-[#7D8F69] text-white shadow-xs'
+                    : 'text-[#8C857D] hover:text-[#2D2926]'
                 }`}
               >
                 Chia Đều ({currentGroup.members.length} người)
@@ -220,10 +220,10 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
               <button
                 type="button"
                 onClick={() => setSplitType('EXACT')}
-                className={`py-2 text-xs font-bold rounded-lg transition ${
+                className={`py-2 text-xs font-bold rounded-xl transition ${
                   splitType === 'EXACT'
-                    ? 'bg-amber-500 text-white shadow'
-                    : 'text-slate-600 dark:text-slate-400'
+                    ? 'bg-[#7D8F69] text-white shadow-xs'
+                    : 'text-[#8C857D] hover:text-[#2D2926]'
                 }`}
               >
                 Tự Điền Số Tiền
@@ -232,8 +232,8 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
           </div>
 
           {/* Splits list preview */}
-          <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+          <div className="space-y-2 pt-2 border-t border-[#EAE7DC]">
+            <span className="text-xs font-bold text-[#4A443F] uppercase tracking-wider block">
               Phân chia cho từng thành viên:
             </span>
 
@@ -241,11 +241,11 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
               {getSplits().map((s) => (
                 <div
                   key={s.memberId}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#F9F8F3] border border-[#EAE7DC] text-xs"
                 >
-                  <span className="font-bold text-slate-800 dark:text-slate-200">{s.memberName}</span>
+                  <span className="font-bold text-[#2D2926]">{s.memberName}</span>
                   {splitType === 'EQUAL' ? (
-                    <span className="font-extrabold text-amber-600 dark:text-amber-400">
+                    <span className="font-extrabold text-[#D98B72]">
                       {formatVND(s.amount)}
                     </span>
                   ) : (
@@ -255,7 +255,7 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                       onChange={(e) =>
                         setCustomSplits({ ...customSplits, [s.memberId]: Number(e.target.value) })
                       }
-                      className="w-28 p-1 text-right font-bold rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                      className="w-28 p-1 text-right font-bold rounded-lg border border-[#EAE7DC] bg-white text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"
                     />
                   )}
                 </div>
@@ -263,20 +263,20 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
             </div>
           </div>
 
-          {error && <p className="text-xs font-semibold text-rose-500">{error}</p>}
+          {error && <p className="text-xs font-bold text-[#D98B72]">{error}</p>}
 
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+              className="px-4 py-2 text-xs font-bold text-[#8C857D] hover:bg-[#F9F8F3] rounded-xl transition"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 rounded-xl shadow-lg shadow-amber-500/20"
+              className="px-5 py-2.5 text-xs font-extrabold text-white bg-[#7D8F69] hover:bg-[#687856] rounded-xl shadow-xs transition"
             >
               {isSubmitting ? 'Đang tạo...' : 'Lưu Hóa Đơn'}
             </button>

@@ -8,6 +8,7 @@ import {
   Wallet as WalletIcon,
   Users,
   Receipt,
+  ReceiptText,
   Sparkles,
   Plus,
   ArrowUpRight,
@@ -36,6 +37,9 @@ import {
   TrendingUp,
   Tag,
   PieChart as PieChartIcon,
+  Scale,
+  ScanLine,
+  AudioLines,
 } from 'lucide-react';
 
 import { apiService } from './services/api';
@@ -55,10 +59,10 @@ import {
 } from './types';
 import { formatVND, formatVNDShort } from './lib/formatters';
 
-// Modals
+// Modals & Views
 import { AddTransactionModal } from './components/AddTransactionModal';
 import { AddWalletModal } from './components/AddWalletModal';
-import { WalletTransferModal } from './components/WalletTransferModal';
+import { WalletsView } from './components/WalletsView';
 import { AddGroupModal } from './components/AddGroupModal';
 import { AddBillModal } from './components/AddBillModal';
 import { SettlementModal } from './components/SettlementModal';
@@ -198,8 +202,9 @@ export default function App() {
   // Modal Control States
   const [isQuickAddMenuOpen, setIsQuickAddMenuOpen] = useState(false);
   const [isAddTxOpen, setIsAddTxOpen] = useState(false);
+  const [addTxInitialTab, setAddTxInitialTab] = useState<'expense' | 'income' | 'transfer'>('expense');
+  const [addTxPreselectedWalletId, setAddTxPreselectedWalletId] = useState<string | undefined>(undefined);
   const [isAddWalletOpen, setIsAddWalletOpen] = useState(false);
-  const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isAddGroupOpen, setIsAddGroupOpen] = useState(false);
   const [isAddBillOpen, setIsAddBillOpen] = useState(false);
   const [selectedGroupIdForBill, setSelectedGroupIdForBill] = useState<string | undefined>(undefined);
@@ -211,6 +216,19 @@ export default function App() {
   const [isNlpOpen, setIsNlpOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedTxForDetail, setSelectedTxForDetail] = useState<Transaction | null>(null);
+
+  // Quick Open Transaction & Transfer Handlers
+  const handleOpenAddTx = (walletId?: string, tab: 'expense' | 'income' | 'transfer' = 'expense') => {
+    setAddTxInitialTab(tab);
+    setAddTxPreselectedWalletId(walletId);
+    setIsAddTxOpen(true);
+  };
+
+  const handleOpenTransfer = (preselectedWalletId?: string) => {
+    setAddTxInitialTab('transfer');
+    setAddTxPreselectedWalletId(preselectedWalletId);
+    setIsAddTxOpen(true);
+  };
 
   // Load All Data from API / LocalStorage
   const loadAppData = async () => {
@@ -325,9 +343,9 @@ export default function App() {
       <PWAInstallPrompt />
 
       {/* MOBILE TOP BAR (visible on screens < md) */}
-      <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-[#EAE7DC] shrink-0 z-30">
+      <header className="md:hidden flex items-center justify-between px-4 py-2.5 bg-white border-b border-[#EAE7DC] shrink-0 z-30">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-[#7D8F69] rounded-lg flex items-center justify-center text-white shadow-xs">
+          <div className="w-8 h-8 bg-[#7D8F69] rounded-xl flex items-center justify-center text-white shadow-xs">
             <svg
               width="18"
               height="18"
@@ -344,29 +362,44 @@ export default function App() {
             </svg>
           </div>
           <div>
-            <span className="text-base font-black tracking-tight text-[#4A443F] block leading-none">
+            <span className="text-sm font-black tracking-tight text-[#4A443F] block leading-none">
               SIVI WALLET
             </span>
             <span className="text-[9px] text-[#7D8F69] font-bold tracking-wider uppercase">
-              PWA Mobile App
+              Quản lý chi tiêu
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
-            onClick={() => setIsOcrOpen(true)}
-            className="p-2 bg-[#F9F8F3] rounded-xl text-[#8C857D] hover:text-[#2D2926] border border-[#EAE7DC]"
-            title="Quét hóa đơn"
+            onClick={() => setActiveTab('wallets')}
+            className={`p-2 rounded-xl border transition ${
+              activeTab === 'wallets'
+                ? 'bg-[#7D8F69] text-white border-[#7D8F69]'
+                : 'bg-[#F9F8F3] text-[#8C857D] hover:text-[#2D2926] border-[#EAE7DC]'
+            }`}
+            title="Ví của tôi"
           >
-            <Camera className="w-4 h-4" />
+            <WalletIcon className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setActiveTab('groups')}
+            className={`p-2 rounded-xl border transition ${
+              activeTab === 'groups'
+                ? 'bg-[#7D8F69] text-white border-[#7D8F69]'
+                : 'bg-[#F9F8F3] text-[#8C857D] hover:text-[#2D2926] border-[#EAE7DC]'
+            }`}
+            title="Nhóm chi tiêu"
+          >
+            <Users className="w-4 h-4" />
           </button>
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-2 bg-[#F9F8F3] rounded-xl text-[#8C857D] hover:text-[#2D2926] border border-[#EAE7DC]"
-            title="Cài đặt"
+            className="w-8 h-8 rounded-full bg-[#D98B72] border-2 border-white shadow-xs flex items-center justify-center text-white font-black text-xs hover:opacity-90 transition shrink-0 ml-1"
+            title="Cài đặt & Tài khoản"
           >
-            <SettingsIcon className="w-4 h-4" />
+            {(user?.name || 'T').charAt(0).toUpperCase()}
           </button>
         </div>
       </header>
@@ -416,13 +449,19 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('transactions')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'transactions'
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'transactions' || activeTab === 'debts'
                 ? 'bg-[#F1EFE7] text-[#7D8F69]'
                 : 'text-[#8C857D] hover:bg-[#F9F8F3] hover:text-[#2D2926]'
             }`}
           >
-            <Receipt className="w-5 h-5 text-[#7D8F69]" /> Sổ giao dịch ({transactions.length})
+            <div className="flex items-center gap-3">
+              <ReceiptText className="w-5 h-5 text-[#7D8F69]" />
+              <span>Sổ Thu Chi & Nợ</span>
+            </div>
+            {debts.length > 0 && (
+              <span className="w-2 h-2 rounded-full bg-[#D98B72]" title={`${debts.length} khoản nợ cần theo dõi`} />
+            )}
           </button>
 
           <button
@@ -468,22 +507,6 @@ export default function App() {
           >
             <Users className="w-5 h-5" /> Nhóm chi tiêu ({groups.length})
           </button>
-
-          <button
-            onClick={() => setActiveTab('debts')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'debts'
-                ? 'bg-[#F1EFE7] text-[#7D8F69]'
-                : 'text-[#8C857D] hover:bg-[#F9F8F3] hover:text-[#2D2926]'
-            }`}
-          >
-            <Receipt className="w-5 h-5" /> Sổ nợ & Tất toán
-            {debts.length > 0 && (
-              <span className="ml-auto px-1.5 py-0.5 text-[10px] bg-[#D98B72] text-white rounded-full">
-                {debts.length}
-              </span>
-            )}
-          </button>
         </nav>
 
         {/* User Account & Settings Footer */}
@@ -504,45 +527,36 @@ export default function App() {
 
       {/* CENTER MAIN CONTENT AREA */}
       <main className="flex-1 p-4 pb-28 md:p-8 flex flex-col gap-6 overflow-y-auto">
-        {/* Header Bar */}
-        <header className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-[#2D2926]">
-              Chào buổi sáng, {user?.name || 'Minh'}!
-            </h1>
-            <p className="text-xs text-[#8C857D] font-medium mt-0.5">
-              Hôm nay bạn đã chi tiêu <span className="font-bold text-[#D98B72]">{formatVND(todayExpense)}</span>.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Quick Add Transaction Button */}
-            <button
-              onClick={() => setIsQuickAddMenuOpen(true)}
-              className="px-4 py-2 bg-[#7D8F69] hover:bg-[#687856] text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition"
-            >
-              <Plus className="w-4 h-4" /> Ghi giao dịch
-            </button>
-
-            {/* OCR Button */}
-            <button
-              onClick={() => setIsOcrOpen(true)}
-              className="p-2.5 bg-white border border-[#EAE7DC] rounded-full shadow-sm text-[#8C857D] hover:text-[#2D2926] transition"
-              title="Quét Hóa Đơn AI OCR"
-            >
-              <Camera className="w-4 h-4" />
-            </button>
-
-            {/* Profile Avatar */}
-            <div className="w-10 h-10 rounded-full bg-[#D98B72] border-2 border-white shadow-md flex items-center justify-center text-white font-black text-sm">
-              {(user?.name || 'M').charAt(0).toUpperCase()}
-            </div>
-          </div>
-        </header>
-
         {/* OVERVIEW TAB CONTENT */}
         {activeTab === 'overview' && (
           <>
+            {/* Overview Header: Dynamic Greeting & Quick Add Button */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-[#2D2926] tracking-tight truncate">
+                  {(() => {
+                    const hour = new Date().getHours();
+                    if (hour < 12) return 'Chào buổi sáng';
+                    if (hour < 18) return 'Chào buổi chiều';
+                    return 'Chào buổi tối';
+                  })()}, {user?.name ? user.name.split(' ').pop() || user.name : 'Nam'}!
+                </h1>
+                <p className="text-xs text-[#8C857D] font-medium mt-0.5">
+                  Hôm nay bạn đã chi tiêu <span className="font-bold text-[#D98B72]">{formatVND(todayExpense)}</span>
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setIsQuickAddMenuOpen(true)}
+                  className="px-3.5 py-2 bg-[#7D8F69] hover:bg-[#687856] active:scale-95 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                  <span>Ghi giao dịch</span>
+                </button>
+              </div>
+            </div>
+
             {/* Top Stat Cards Section */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
               {/* Total Balance Hero Card */}
@@ -802,87 +816,45 @@ export default function App() {
           </>
         )}
 
-        {/* TRANSACTIONS TAB CONTENT (SỔ GIAO DỊCH) */}
-        {activeTab === 'transactions' && (
+        {/* TRANSACTIONS & DEBTS UNIFIED TAB (SỔ THU CHI & NỢ) */}
+        {(activeTab === 'transactions' || activeTab === 'debts') && (
           <TransactionHistoryView
             transactions={transactions}
             wallets={wallets}
             categories={categories}
+            debts={debts}
+            groups={groups}
+            bills={bills}
+            initialSubTab={activeTab === 'debts' ? 'debts' : 'transactions'}
             onDeleteTransaction={handleDeleteTransaction}
             onOpenAddModal={() => setIsAddTxOpen(true)}
             onOpenOcrModal={() => setIsOcrOpen(true)}
             onOpenNlpModal={() => setIsNlpOpen(true)}
+            onSettleDebt={(debt) => {
+              setSelectedDebtForSettle(debt);
+              setIsSettleOpen(true);
+            }}
+            onOpenAddBill={(groupId) => {
+              setSelectedGroupIdForBill(groupId);
+              setIsAddBillOpen(true);
+            }}
+            onOpenAddGroup={() => setIsAddGroupOpen(true)}
           />
         )}
 
         {/* WALLETS TAB CONTENT */}
         {activeTab === 'wallets' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-[#2D2926]">Quản Lý Ví & Tài Khoản</h2>
-                <p className="text-xs text-[#8C857D]">
-                  Tổng số dư: <span className="font-bold text-[#7D8F69]">{formatVND(totalBalance)}</span>
-                </p>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setIsTransferOpen(true)}
-                  className="px-4 py-2 bg-[#F1EFE7] hover:bg-[#EAE7DC] text-[#2D2926] rounded-xl text-xs font-bold transition flex items-center gap-1"
-                >
-                  <ArrowRightLeft className="w-4 h-4 text-[#7D8F69]" /> Chuyển Khoản Nội Bộ
-                </button>
-                <button
-                  onClick={() => setIsAddWalletOpen(true)}
-                  className="px-4 py-2 bg-[#7D8F69] hover:bg-[#687856] text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1"
-                >
-                  <Plus className="w-4 h-4" /> Tạo Ví Mới
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {wallets.map((w) => (
-                <div
-                  key={w.id}
-                  className="bg-white border border-[#EAE7DC] rounded-[28px] p-6 shadow-sm flex flex-col justify-between hover:border-[#7D8F69] transition"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-[#F1EFE7] flex items-center justify-center text-[#7D8F69] font-bold">
-                        {w.type === 'BANK' ? (
-                          <Building2 className="w-6 h-6" />
-                        ) : w.type === 'E_WALLET' ? (
-                          <Smartphone className="w-6 h-6" />
-                        ) : (
-                          <Banknote className="w-6 h-6" />
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-base text-[#2D2926]">{w.name}</h3>
-                        <p className="text-xs text-[#8C857D]">
-                          {w.type === 'BANK'
-                            ? w.bankName || 'Ngân hàng'
-                            : w.type === 'E_WALLET'
-                            ? 'Ví điện tử'
-                            : 'Tiền mặt cầm tay'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-4 border-t border-[#F9F8F3]">
-                    <span className="text-[11px] text-[#8C857D] uppercase font-bold">Số dư hiện tại</span>
-                    <p className="text-2xl font-black text-[#7D8F69] mt-0.5">{formatVND(w.balance)}</p>
-                    {w.accountNumber && (
-                      <p className="text-[11px] text-[#8C857D] mt-1 font-mono">STK: {w.accountNumber}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <WalletsView
+            wallets={wallets}
+            transactions={transactions}
+            categories={categories}
+            totalBalance={totalBalance}
+            onRefreshData={loadAppData}
+            onOpenAddWallet={() => setIsAddWalletOpen(true)}
+            onOpenTransfer={handleOpenTransfer}
+            onOpenAddTransaction={handleOpenAddTx}
+            onSelectTransactionDetail={(tx) => setSelectedTxForDetail(tx)}
+          />
         )}
 
         {/* GROUPS TAB CONTENT */}
@@ -975,60 +947,6 @@ export default function App() {
           </div>
         )}
 
-        {/* DEBTS TAB CONTENT */}
-        {activeTab === 'debts' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-[#2D2926]">Sổ Nợ & Tất Toán</h2>
-                <p className="text-xs text-[#8C857D]">Tối ưu ma trận nợ nhóm, thanh toán sòng phẳng</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {debts.length === 0 ? (
-                <div className="bg-white border border-[#EAE7DC] rounded-[28px] p-12 text-center text-[#8C857D]">
-                  <CheckCircle2 className="w-12 h-12 text-[#7D8F69] mx-auto mb-2" />
-                  <p className="text-sm font-bold text-[#2D2926]">Sạch nợ! Không ai nợ ai trong các nhóm.</p>
-                </div>
-              ) : (
-                debts.map((d, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-white border border-[#EAE7DC] rounded-[24px] p-5 shadow-sm flex items-center justify-between gap-4"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-[#D98B72]/10 text-[#D98B72] flex items-center justify-center font-bold text-xs shrink-0">
-                        NỢ
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-[#2D2926]">
-                          <span className="text-[#D98B72]">{d.debtorName}</span> nợ{' '}
-                          <span className="text-[#7D8F69]">{d.creditorName}</span>
-                        </p>
-                        <p className="text-xs text-[#8C857D]">Nhóm: {d.groupName}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <span className="text-lg font-black text-[#D98B72]">{formatVND(d.amount)}</span>
-                      <button
-                        onClick={() => {
-                          setSelectedDebtForSettle(d);
-                          setIsSettleOpen(true);
-                        }}
-                        className="px-4 py-2 bg-[#7D8F69] hover:bg-[#687856] text-white rounded-xl text-xs font-bold transition shadow-sm"
-                      >
-                        Thanh Toán
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
         {/* ANALYTICS TAB CONTENT */}
         {activeTab === 'analytics' && (
           <AnalyticsView
@@ -1090,7 +1008,7 @@ export default function App() {
               + Thêm Ví
             </button>
             <button
-              onClick={() => setIsTransferOpen(true)}
+              onClick={() => handleOpenTransfer()}
               className="flex-1 py-2 text-xs font-bold bg-[#F1EFE7] hover:bg-[#EAE7DC] text-[#4A443F] rounded-xl transition text-center"
             >
               Chuyển Tiền
@@ -1142,11 +1060,11 @@ export default function App() {
         </div>
       </aside>
 
-      {/* MOBILE BOTTOM NAVIGATION DOCK (PWA Native Bottom Bar) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#EAE7DC] px-3 py-2 flex items-center justify-around shadow-lg">
+      {/* MOBILE BOTTOM NAVIGATION DOCK (PWA Native Bottom Bar - Optimized 5 Items) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#EAE7DC] px-2 py-2 flex items-center justify-around shadow-lg">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`flex flex-col items-center gap-1 p-1 text-center transition ${
+          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 ${
             activeTab === 'overview' ? 'text-[#7D8F69] font-bold' : 'text-[#8C857D]'
           }`}
         >
@@ -1156,17 +1074,33 @@ export default function App() {
 
         <button
           onClick={() => setActiveTab('transactions')}
-          className={`flex flex-col items-center gap-1 p-1 text-center transition ${
-            activeTab === 'transactions' ? 'text-[#7D8F69] font-bold' : 'text-[#8C857D]'
+          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 relative ${
+            activeTab === 'transactions' || activeTab === 'debts'
+              ? 'text-[#7D8F69] font-bold'
+              : 'text-[#8C857D]'
           }`}
         >
-          <Receipt className="w-5 h-5" />
-          <span className="text-[10px]">Sổ GD</span>
+          <ReceiptText className="w-5 h-5" />
+          <span className="text-[10px]">Sổ Thu & Nợ</span>
+          {debts.length > 0 && (
+            <span className="absolute top-0.5 right-2 w-2 h-2 rounded-full bg-[#D98B72] ring-2 ring-white" />
+          )}
         </button>
+
+        {/* Floating Quick Action Button (+) */}
+        <div className="flex-1 flex justify-center">
+          <button
+            onClick={() => setIsQuickAddMenuOpen(true)}
+            className="w-12 h-12 bg-[#7D8F69] active:scale-95 hover:bg-[#687856] text-white rounded-full flex items-center justify-center -mt-6 border-4 border-[#F9F8F3] shadow-lg transition"
+            title="Ghi giao dịch nhanh"
+          >
+            <Plus className="w-6 h-6 stroke-[2.5]" />
+          </button>
+        </div>
 
         <button
           onClick={() => setActiveTab('analytics')}
-          className={`flex flex-col items-center gap-1 p-1 text-center transition ${
+          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 ${
             activeTab === 'analytics' ? 'text-[#7D8F69] font-bold' : 'text-[#8C857D]'
           }`}
         >
@@ -1176,54 +1110,12 @@ export default function App() {
 
         <button
           onClick={() => setActiveTab('coach')}
-          className={`flex flex-col items-center gap-1 p-1 text-center transition ${
+          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 ${
             activeTab === 'coach' ? 'text-amber-600 font-bold' : 'text-[#8C857D]'
           }`}
         >
           <Sparkles className="w-5 h-5 text-amber-500" />
           <span className="text-[10px]">Cố vấn AI</span>
-        </button>
-
-        {/* Floating Quick Action Button (+) */}
-        <button
-          onClick={() => setIsQuickAddMenuOpen(true)}
-          className="w-12 h-12 bg-[#7D8F69] active:scale-95 hover:bg-[#687856] text-white rounded-full flex items-center justify-center -mt-6 border-4 border-[#F9F8F3] shadow-md transition"
-          title="Ghi giao dịch nhanh"
-        >
-          <Plus className="w-6 h-6 stroke-[3]" />
-        </button>
-
-        <button
-          onClick={() => setActiveTab('wallets')}
-          className={`flex flex-col items-center gap-1 p-1 text-center transition ${
-            activeTab === 'wallets' ? 'text-[#7D8F69] font-bold' : 'text-[#8C857D]'
-          }`}
-        >
-          <WalletIcon className="w-5 h-5" />
-          <span className="text-[10px]">Ví tiền</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('groups')}
-          className={`flex flex-col items-center gap-1 p-1 text-center transition ${
-            activeTab === 'groups' ? 'text-[#7D8F69] font-bold' : 'text-[#8C857D]'
-          }`}
-        >
-          <Users className="w-5 h-5" />
-          <span className="text-[10px]">Nhóm</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('debts')}
-          className={`flex flex-col items-center gap-1 p-1 text-center transition relative ${
-            activeTab === 'debts' ? 'text-[#7D8F69] font-bold' : 'text-[#8C857D]'
-          }`}
-        >
-          <Receipt className="w-5 h-5" />
-          <span className="text-[10px]">Sổ nợ</span>
-          {debts.length > 0 && (
-            <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-[#D98B72]" />
-          )}
         </button>
       </nav>
 
@@ -1252,30 +1144,28 @@ export default function App() {
         onSelectOption={(option) => {
           if (option === 'nlp') setIsNlpOpen(true);
           else if (option === 'ocr') setIsOcrOpen(true);
-          else if (option === 'manual') setIsAddTxOpen(true);
-          else if (option === 'transfer') setIsTransferOpen(true);
+          else if (option === 'manual') handleOpenAddTx(undefined, 'expense');
+          else if (option === 'transfer') handleOpenTransfer();
           else if (option === 'bill') setIsAddBillOpen(true);
         }}
       />
 
       <AddTransactionModal
         isOpen={isAddTxOpen}
-        onClose={() => setIsAddTxOpen(false)}
+        onClose={() => {
+          setIsAddTxOpen(false);
+          setAddTxPreselectedWalletId(undefined);
+        }}
         wallets={wallets}
         categories={categories}
         onSuccess={loadAppData}
+        initialTab={addTxInitialTab}
+        preselectedWalletId={addTxPreselectedWalletId}
       />
 
       <AddWalletModal
         isOpen={isAddWalletOpen}
         onClose={() => setIsAddWalletOpen(false)}
-        onSuccess={loadAppData}
-      />
-
-      <WalletTransferModal
-        isOpen={isTransferOpen}
-        onClose={() => setIsTransferOpen(false)}
-        wallets={wallets}
         onSuccess={loadAppData}
       />
 

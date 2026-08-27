@@ -286,50 +286,50 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#2D2926]/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl overflow-hidden border border-[#EAE7DC] flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#EAE7DC] bg-[#F9F8F3] shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <div className="p-2 rounded-2xl bg-[#7D8F69]/15 text-[#7D8F69]">
               <Sparkles className="w-5 h-5 animate-pulse" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Quét Hóa Đơn bằng Gemini AI (OCR)</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Tự động đọc hóa đơn & áp dụng lời dặn tùy chỉnh</p>
+              <h2 className="text-base font-extrabold text-[#2D2926]">Quét Hóa Đơn AI</h2>
+              <p className="text-xs text-[#8C857D]">Tự động đọc hóa đơn & áp dụng lời dặn tùy chỉnh</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="p-1.5 rounded-full text-[#8C857D] hover:text-[#2D2926] hover:bg-[#EAE7DC] transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
           {/* STEP 1A: Dropzone & Sample Receipts Selector (If no image is picked yet) */}
           {!imagePreview && (
             <div className="space-y-4">
               <label
-                className={`flex flex-col items-center justify-center w-full h-52 border-2 border-dashed rounded-2xl cursor-pointer transition-all group ${
+                className={`flex flex-col items-center justify-center w-full h-48 sm:h-52 border-2 border-dashed rounded-2xl cursor-pointer transition-all group ${
                   isDragOver
-                    ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 scale-[1.02]'
-                    : 'border-slate-300 dark:border-slate-700 hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20'
+                    ? 'border-[#7D8F69] bg-[#7D8F69]/10 scale-[1.01]'
+                    : 'border-[#EAE7DC] hover:border-[#7D8F69] hover:bg-[#F9F8F3]'
                 }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
               >
                 <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
-                  <div className={`p-3 mb-3 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 transition-transform ${isDragOver ? 'scale-125' : 'group-hover:scale-110'}`}>
-                    {isDragOver ? <Upload className="w-8 h-8" /> : <Camera className="w-8 h-8" />}
+                  <div className={`p-3 mb-3 rounded-full bg-[#7D8F69]/15 text-[#7D8F69] transition-transform ${isDragOver ? 'scale-125' : 'group-hover:scale-110'}`}>
+                    {isDragOver ? <Upload className="w-7 h-7" /> : <Camera className="w-7 h-7" />}
                   </div>
-                  <p className="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  <p className="mb-1 text-sm font-bold text-[#2D2926]">
                     {isDragOver ? 'Thả ảnh hóa đơn vào đây!' : 'Nhấp để tải lên hoặc kéo thả ảnh hóa đơn'}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-[#8C857D]">
                     Hỗ trợ JPG, PNG, WEBP (chụp hóa đơn nhà hàng, siêu thị, phiếu thu...)
                   </p>
                 </div>
@@ -338,7 +338,7 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
 
               {/* Sample receipts quick test */}
               <div className="pt-2">
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                <p className="text-xs font-bold text-[#8C857D] uppercase tracking-wider mb-2">
                   Hoặc chọn hóa đơn mẫu trải nghiệm nhanh:
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -346,14 +346,14 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
                     <button
                       key={idx}
                       onClick={() => handleSelectSample(s)}
-                      className="flex items-center gap-3 p-3 text-left rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 bg-slate-50 dark:bg-slate-800/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30 transition group"
+                      className="flex items-center gap-3 p-3 text-left rounded-2xl border border-[#EAE7DC] hover:border-[#7D8F69] bg-[#F9F8F3] hover:bg-[#F1EFE7] transition group"
                     >
-                      <img src={s.url} alt={s.name} className="w-12 h-12 object-cover rounded-lg shrink-0" />
+                      <img src={s.url} alt={s.name} className="w-12 h-12 object-cover rounded-xl shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-emerald-600">
+                        <p className="text-xs font-bold text-[#2D2926] truncate group-hover:text-[#7D8F69]">
                           {s.name}
                         </p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Bấm để chọn mẫu</p>
+                        <p className="text-[11px] text-[#8C857D]">Bấm để chọn mẫu</p>
                       </div>
                     </button>
                   ))}
@@ -367,12 +367,12 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               {/* Left Column: Image Preview Box */}
               <div className="md:col-span-4 flex flex-col items-center">
-                <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800">
+                <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden border border-[#EAE7DC] bg-[#F9F8F3]">
                   <img src={imagePreview} alt="Receipt Preview" className="w-full h-full object-contain" />
                 </div>
                 <button
                   onClick={resetAll}
-                  className="mt-3 text-xs font-semibold text-rose-500 hover:underline flex items-center gap-1"
+                  className="mt-3 text-xs font-bold text-[#D98B72] hover:underline flex items-center gap-1"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Chọn ảnh khác
                 </button>
@@ -382,25 +382,25 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
               <div className="md:col-span-8 space-y-4">
                 {/* STEP 1B: Image Ready + Prompting Input + Phân Tích Button */}
                 {!ocrResult && !isLoading && (
-                  <div className="space-y-4 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                  <div className="space-y-4 bg-[#F9F8F3] p-4 rounded-2xl border border-[#EAE7DC]">
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                        <MessageSquare className="w-4 h-4 text-amber-500" /> 💬 Lời dặn cho AI (Tùy chọn)
+                      <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
+                        <MessageSquare className="w-4 h-4 text-[#D98B72]" /> 💬 Lời dặn cho AI (Tùy chọn)
                       </label>
                       <textarea
                         value={userNote}
                         onChange={(e) => setUserNote(e.target.value)}
                         placeholder="VD: Món xúc xích là của bạn tôi nên trừ ra; Chia đôi bill này với Nam..."
                         rows={3}
-                        className="w-full p-3 text-xs font-medium rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition resize-none"
+                        className="w-full p-3 text-xs font-medium rounded-2xl bg-white border border-[#EAE7DC] text-[#2D2926] placeholder:text-[#8C857D] focus:outline-none focus:ring-2 focus:ring-[#7D8F69] transition resize-none"
                       />
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Nhập yêu cầu đặc biệt (loại trừ món, tính riêng, chia tiền...) để Gemini AI tự động áp dụng.
+                      <p className="text-[11px] text-[#8C857D]">
+                        Nhập yêu cầu đặc biệt (loại trừ món, tính riêng, chia tiền...) để AI tự động áp dụng.
                       </p>
                     </div>
 
                     {error && (
-                      <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
+                      <div className="p-3 rounded-xl bg-[#D98B72]/10 border border-[#D98B72]/30 text-[#D98B72] text-xs flex items-start gap-2">
                         <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                         <span>{error}</span>
                       </div>
@@ -408,9 +408,9 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
 
                     <button
                       onClick={handleAnalyzeReceipt}
-                      className="w-full py-3 px-4 text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-600 hover:to-emerald-700 rounded-xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition transform active:scale-[0.99]"
+                      className="w-full py-3 px-4 text-xs font-bold text-white bg-[#7D8F69] hover:bg-[#687856] rounded-2xl shadow-sm flex items-center justify-center gap-2 transition"
                     >
-                      <Sparkles className="w-4 h-4 animate-spin" /> [⚡ Phân Tích Bằng Gemini AI]
+                      <Sparkles className="w-4 h-4" /> Phân Tích Bằng AI
                     </button>
                   </div>
                 )}
@@ -419,14 +419,14 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
                 {isLoading && (
                   <div className="flex flex-col items-center justify-center h-full py-16 text-center space-y-4">
                     <div className="relative">
-                      <div className="w-12 h-12 rounded-full border-4 border-amber-500/20 border-t-amber-500 animate-spin" />
-                      <Sparkles className="w-6 h-6 text-amber-500 absolute inset-0 m-auto animate-pulse" />
+                      <div className="w-12 h-12 rounded-full border-4 border-[#7D8F69]/20 border-t-[#7D8F69] animate-spin" />
+                      <Sparkles className="w-6 h-6 text-[#7D8F69] absolute inset-0 m-auto animate-pulse" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                        Gemini đang đọc hóa đơn và áp dụng lời dặn...
+                      <p className="text-sm font-bold text-[#2D2926]">
+                        AI đang đọc hóa đơn và áp dụng lời dặn...
                       </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      <p className="text-xs text-[#8C857D] mt-1">
                         Bóc tách món ăn, tính toán lại tổng tiền & ghi chú...
                       </p>
                     </div>
@@ -437,29 +437,29 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
                 {ocrResult && !isLoading && (
                   <div className="space-y-4 animate-in fade-in duration-300">
                     {error && (
-                      <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
+                      <div className="p-3 rounded-xl bg-[#D98B72]/10 border border-[#D98B72]/30 text-[#D98B72] text-xs flex items-start gap-2">
                         <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                         <span>{error}</span>
                       </div>
                     )}
 
                     {/* Merchant & Total */}
-                    <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/50 space-y-3">
+                    <div className="p-4 rounded-2xl bg-[#F9F8F3] border border-[#EAE7DC] space-y-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                          <label className="text-[11px] font-bold text-[#8C857D] uppercase tracking-wider">
                             Cửa hàng / Địa điểm
                           </label>
                           <input
                             type="text"
                             value={ocrResult.merchantName}
                             onChange={(e) => setOcrResult({ ...ocrResult, merchantName: e.target.value })}
-                            className="w-full text-base font-bold text-slate-900 dark:text-white bg-transparent border-b border-dashed border-slate-300 dark:border-slate-700 focus:outline-none focus:border-emerald-500"
+                            className="w-full text-base font-bold text-[#2D2926] bg-transparent border-b border-dashed border-[#EAE7DC] focus:outline-none focus:border-[#7D8F69]"
                           />
                         </div>
                         <div className="text-right">
-                          <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                            Tổng cộng (đ)
+                          <label className="text-[11px] font-bold text-[#8C857D] uppercase tracking-wider block">
+                            Tổng cộng
                           </label>
                           <div className="flex items-center justify-end gap-1">
                             <input
@@ -470,9 +470,9 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
                                 setOcrResult({ ...ocrResult, totalAmount: val });
                               }}
                               placeholder="0"
-                              className="w-36 text-right text-base font-black text-emerald-600 dark:text-emerald-400 bg-transparent border-b border-dashed border-slate-300 dark:border-slate-700 focus:outline-none focus:border-emerald-500"
+                              className="w-36 text-right text-base font-black text-[#D98B72] bg-transparent border-b border-dashed border-[#EAE7DC] focus:outline-none focus:border-[#7D8F69]"
                             />
-                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">đ</span>
+                            <span className="text-xs font-bold text-[#D98B72]">đ</span>
                           </div>
                         </div>
                       </div>
@@ -480,13 +480,13 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
                       {/* Wallet, Category, Date-Time picker */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                         <div>
-                          <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1">
+                          <label className="text-xs font-bold text-[#4A443F] block mb-1">
                             Ví thanh toán:
                           </label>
                           <select
                             value={selectedWalletId}
                             onChange={(e) => setSelectedWalletId(e.target.value)}
-                            className="w-full p-2 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                            className="w-full p-2 text-xs font-bold rounded-xl bg-white border border-[#EAE7DC] text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"
                           >
                             {wallets.map((w) => (
                               <option key={w.id} value={w.id}>
@@ -496,25 +496,25 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
                           </select>
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1">
+                          <label className="text-xs font-bold text-[#4A443F] block mb-1">
                             Danh mục:
                           </label>
                           <input
                             type="text"
                             value={ocrResult.category}
                             onChange={(e) => setOcrResult({ ...ocrResult, category: e.target.value })}
-                            className="w-full p-2 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                            className="w-full p-2 text-xs font-bold rounded-xl bg-white border border-[#EAE7DC] text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1">
+                          <label className="text-xs font-bold text-[#4A443F] block mb-1">
                             Ngày & giờ giao dịch:
                           </label>
                           <input
                             type="datetime-local"
                             value={ocrResult.transactionDate ? ocrResult.transactionDate.substring(0, 16) : ''}
                             onChange={(e) => setOcrResult({ ...ocrResult, transactionDate: e.target.value })}
-                            className="w-full p-2 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                            className="w-full p-2 text-xs font-bold rounded-xl bg-white border border-[#EAE7DC] text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"
                           />
                         </div>
                       </div>
@@ -523,44 +523,44 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
                     {/* Items table */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                        <span className="text-xs font-bold text-[#4A443F] uppercase tracking-wider">
                           Chi tiết các món ({ocrResult.items.length})
                         </span>
                         <button
                           onClick={addItem}
-                          className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                          className="text-xs font-bold text-[#7D8F69] hover:underline flex items-center gap-1"
                         >
                           <Plus className="w-3.5 h-3.5" /> Thêm món
                         </button>
                       </div>
 
-                      <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 max-h-44 overflow-y-auto custom-scrollbar">
+                      <div className="border border-[#EAE7DC] rounded-2xl overflow-hidden divide-y divide-[#EAE7DC] max-h-44 overflow-y-auto custom-scrollbar">
                         {ocrResult.items.map((item, idx) => (
-                          <div key={idx} className="p-2.5 flex items-center gap-2 bg-slate-50/50 dark:bg-slate-800/30">
+                          <div key={idx} className="p-2.5 flex items-center gap-2 bg-[#F9F8F3]">
                             <input
                               type="text"
                               value={item.name}
                               onChange={(e) => updateItem(idx, 'name', e.target.value)}
-                              className="flex-1 text-xs font-semibold bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                              className="flex-1 text-xs font-semibold bg-transparent text-[#2D2926] focus:outline-none"
                             />
                             <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[10px] text-slate-400">SL:</span>
+                              <span className="text-[10px] text-[#8C857D]">SL:</span>
                               <input
                                 type="number"
                                 value={item.quantity}
                                 onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))}
-                                className="w-12 text-xs text-center font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1 py-1 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                className="w-12 text-xs text-center font-bold bg-white border border-[#EAE7DC] rounded-lg px-1 py-1 text-[#2D2926] focus:outline-none focus:ring-1 focus:ring-[#7D8F69]"
                               />
                               <input
                                 type="number"
                                 value={item.price}
                                 onChange={(e) => updateItem(idx, 'price', Number(e.target.value))}
-                                className="w-20 text-xs text-right font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-1 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                className="w-20 text-xs text-right font-bold bg-white border border-[#EAE7DC] rounded-lg px-1.5 py-1 text-[#2D2926] focus:outline-none focus:ring-1 focus:ring-[#7D8F69]"
                               />
-                              <span className="text-[11px] text-slate-400">đ</span>
+                              <span className="text-[11px] text-[#8C857D]">đ</span>
                               <button
                                 onClick={() => removeItem(idx)}
-                                className="text-slate-400 hover:text-rose-500 p-1"
+                                className="text-[#8C857D] hover:text-[#D98B72] p-1"
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>
@@ -571,19 +571,19 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
                     </div>
 
                     {/* Editable Note / Split info */}
-                    <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40">
-                      <label className="text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1 mb-1.5">
-                        <MessageSquare className="w-3.5 h-3.5" /> 💬 Ghi chú / Chia tiền (Tùy chỉnh)
+                    <div className="p-3.5 rounded-2xl bg-[#F9F8F3] border border-[#EAE7DC]">
+                      <label className="text-[11px] font-bold text-[#4A443F] uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-[#D98B72]" /> 💬 Ghi chú / Chia tiền
                       </label>
                       <textarea
                         value={userNote}
                         onChange={(e) => setUserNote(e.target.value)}
                         placeholder="VD: Chia đôi với Nam, Tiền ăn lẩu..."
                         rows={2}
-                        className="w-full p-2.5 text-xs font-medium rounded-lg bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800/50 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition resize-none"
+                        className="w-full p-2.5 text-xs font-medium rounded-xl bg-white border border-[#EAE7DC] text-[#2D2926] placeholder:text-[#8C857D] focus:outline-none focus:ring-2 focus:ring-[#7D8F69] transition resize-none"
                       />
                       {ocrResult.rawNotes && (
-                        <p className="mt-1.5 text-[10px] text-amber-600 dark:text-amber-400 italic">
+                        <p className="mt-1.5 text-[10px] text-[#8C857D] italic">
                           💡 AI trích xuất: {ocrResult.rawNotes}
                         </p>
                       )}
@@ -596,12 +596,12 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="flex items-center justify-between px-5 py-4 border-t border-[#EAE7DC] bg-[#F9F8F3] shrink-0">
           <div>
             {imagePreview && (
               <button
                 onClick={resetAll}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
+                className="px-3 py-1.5 text-xs font-bold text-[#8C857D] hover:text-[#2D2926] flex items-center gap-1.5 hover:bg-[#EAE7DC] rounded-xl transition"
               >
                 <ArrowLeft className="w-3.5 h-3.5" /> Chọn ảnh khác
               </button>
@@ -610,16 +610,16 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
+              className="px-4 py-2 text-xs font-bold text-[#8C857D] hover:bg-[#EAE7DC] rounded-xl transition"
             >
               Hủy
             </button>
             {ocrResult && !isLoading && (
               <button
                 onClick={handleSaveTransaction}
-                className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition"
+                className="px-5 py-2.5 text-xs font-extrabold text-white bg-[#7D8F69] hover:bg-[#687856] rounded-xl shadow-xs flex items-center gap-2 transition"
               >
-                <Check className="w-4 h-4" /> [✓ Lưu Giao Dịch]
+                <Check className="w-4 h-4" /> Lưu Giao Dịch
               </button>
             )}
           </div>
