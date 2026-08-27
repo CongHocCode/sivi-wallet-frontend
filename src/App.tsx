@@ -77,6 +77,7 @@ import { GroupDebtDetailModal } from './components/GroupDebtDetailModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { TransactionHistoryView } from './components/TransactionHistoryView';
 import { TransactionDetailModal } from './components/TransactionDetailModal';
+import { GroupsView } from './components/GroupsView';
 
 import { geminiService } from './services/geminiService';
 
@@ -251,36 +252,48 @@ export default function App() {
         ? wData
         : Array.isArray((wData as any)?.wallets)
         ? (wData as any).wallets
+        : Array.isArray((wData as any)?.data)
+        ? (wData as any).data
         : [];
 
       const categoryList = Array.isArray(cData)
         ? cData
         : Array.isArray((cData as any)?.categories)
         ? (cData as any).categories
+        : Array.isArray((cData as any)?.data)
+        ? (cData as any).data
         : [];
 
       const transactionList = Array.isArray(tData)
         ? tData
         : Array.isArray((tData as any)?.transactions)
         ? (tData as any).transactions
+        : Array.isArray((tData as any)?.data)
+        ? (tData as any).data
         : [];
 
       const groupList = Array.isArray(gData)
         ? gData
         : Array.isArray((gData as any)?.groups)
         ? (gData as any).groups
+        : Array.isArray((gData as any)?.data)
+        ? (gData as any).data
         : [];
 
       const billList = Array.isArray(bData)
         ? bData
         : Array.isArray((bData as any)?.bills)
         ? (bData as any).bills
+        : Array.isArray((bData as any)?.data)
+        ? (bData as any).data
         : [];
 
       const debtList = Array.isArray(dData)
         ? dData
         : Array.isArray((dData as any)?.debts)
         ? (dData as any).debts
+        : Array.isArray((dData as any)?.data)
+        ? (dData as any).data
         : [];
 
       setUser(uData || null);
@@ -948,92 +961,20 @@ export default function App() {
 
         {/* GROUPS TAB CONTENT */}
         {activeTab === 'groups' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-[#2D2926]">Nhóm Chi Tiêu & Chia Hóa Đơn</h2>
-                <p className="text-xs text-[#8C857D]">Quản lý chuyến đi chơi, phòng trọ, kèo ăn uống</p>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setIsAddBillOpen(true)}
-                  className="px-4 py-2 bg-[#F1EFE7] hover:bg-[#EAE7DC] text-[#2D2926] rounded-xl text-xs font-bold transition flex items-center gap-1"
-                >
-                  <Receipt className="w-4 h-4 text-[#D98B72]" /> Thêm Hóa Đơn Nhóm
-                </button>
-                <button
-                  onClick={() => setIsAddGroupOpen(true)}
-                  className="px-4 py-2 bg-[#7D8F69] hover:bg-[#687856] text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1"
-                >
-                  <Plus className="w-4 h-4" /> Tạo Nhóm Mới
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {groups.map((g) => {
-                const groupBills = bills.filter((b) => b.groupId === g.id);
-                const groupTotal = groupBills.reduce((sum, b) => sum + b.totalAmount, 0);
-
-                return (
-                  <div
-                    key={g.id}
-                    className="bg-white border border-[#EAE7DC] rounded-[28px] p-6 shadow-sm flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-bold text-[#8C857D] uppercase tracking-wider">
-                          {g.name}
-                        </span>
-                        <span className="text-[10px] bg-[#7D8F69]/10 text-[#7D8F69] px-2.5 py-0.5 rounded-full font-bold">
-                          {g.members.length} Thành viên
-                        </span>
-                      </div>
-
-                      {g.description && <p className="text-xs text-[#8C857D] mb-4">{g.description}</p>}
-
-                      {/* Member Avatars */}
-                      <div className="flex items-center -space-x-2 mb-4">
-                        {g.members.map((m, idx) => (
-                          <div
-                            key={m.id}
-                            className="w-8 h-8 rounded-full border-2 border-white bg-[#7D8F69] text-white text-[10px] font-extrabold flex items-center justify-center shadow-xs"
-                            title={`${m.name} ${m.isGuest ? '(Khách)' : ''}`}
-                          >
-                            {m.name.charAt(0).toUpperCase()}
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="p-3 bg-[#F9F8F3] rounded-2xl border border-[#EAE7DC] space-y-1">
-                        <div className="flex justify-between text-xs font-medium text-[#8C857D]">
-                          <span>Tổng chi tiêu nhóm:</span>
-                          <span className="font-bold text-[#2D2926]">{formatVND(groupTotal)}</span>
-                        </div>
-                        <div className="flex justify-between text-xs font-medium text-[#8C857D]">
-                          <span>Số kèo hóa đơn:</span>
-                          <span className="font-bold text-[#2D2926]">{groupBills.length} hóa đơn</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-[#F9F8F3] flex gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedGroupIdForBill(g.id);
-                          setIsAddBillOpen(true);
-                        }}
-                        className="w-full py-2 bg-[#F1EFE7] hover:bg-[#EAE7DC] rounded-xl text-xs font-bold text-[#4A443F] transition text-center"
-                      >
-                        + Thêm Kèo Chi Nhóm
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <GroupsView
+            groups={safeGroups}
+            bills={safeBills}
+            debts={safeDebts}
+            onOpenAddBill={(grpId) => {
+              if (grpId) setSelectedGroupIdForBill(grpId);
+              setIsAddBillOpen(true);
+            }}
+            onOpenAddGroup={() => setIsAddGroupOpen(true)}
+            onSelectGroupDetail={(g) => {
+              setSelectedGroupForDetail(g);
+              setIsGroupDetailOpen(true);
+            }}
+          />
         )}
 
         {/* ANALYTICS TAB CONTENT */}
@@ -1118,10 +1059,10 @@ export default function App() {
           </div>
 
           <div className="space-y-3">
-            {groups.length === 0 ? (
+            {safeGroups.length === 0 ? (
               <p className="text-xs text-[#8C857D] italic">Chưa tạo nhóm nào.</p>
             ) : (
-              groups.slice(0, 3).map((g) => {
+              safeGroups.slice(0, 3).map((g) => {
                 const groupDebts = debts.filter((d) => d.groupId === g.id);
                 const groupTotalDebt = groupDebts.reduce((sum, d) => sum + d.amount, 0);
 

@@ -158,7 +158,7 @@ Output ONLY valid raw JSON without any markdown code fences or backticks.`;
     if (apiKey) {
       try {
         const response = await ai.models.generateContent({
-          model: "gemini-3.7-flash",
+          model: "gemini-3.5-flash-lite",
           contents: prompt,
         });
 
@@ -220,7 +220,7 @@ Dữ liệu tháng này:
 Hãy đưa ra đúng 2 câu nhận xét cực mặn bằng tiếng Việt, vừa nhắc nhở vừa mang tính giải trí!`;
 
         const response = await ai.models.generateContent({
-          model: "gemini-3.7-flash",
+          model: "gemini-3.5-flash-lite",
           contents: prompt,
         });
 
@@ -269,7 +269,7 @@ Câu hỏi của người dùng: "${question}"
 Hãy trả lời ngắn gọn (2-4 câu), hữu ích, dí dỏm bằng tiếng Việt.`;
 
         const response = await ai.models.generateContent({
-          model: "gemini-3.7-flash",
+          model: "gemini-3.5-flash-lite",
           contents: prompt,
         });
 

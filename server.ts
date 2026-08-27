@@ -68,7 +68,7 @@ ${customInstruction ? `User additional instruction/note: "${customInstruction}".
 
     const ai = getGenAI();
     const response = await ai.models.generateContent({
-      model: 'gemini-3.7-flash',
+      model: 'gemini-3.5-flash-lite',
       contents: {
         parts: [
           {
@@ -176,7 +176,7 @@ Nhiệm vụ của bạn là phân tích câu nói/văn bản tiếng Việt c�
   try {
     const ai = getGenAI();
     const response = await ai.models.generateContent({
-      model: 'gemini-3.7-flash',
+      model: 'gemini-3.5-flash-lite',
       contents: prompt,
       config: {
         systemInstruction,
@@ -275,7 +275,7 @@ Yêu cầu output JSON:
   try {
     const ai = getGenAI();
     const response = await ai.models.generateContent({
-      model: 'gemini-3.7-flash',
+      model: 'gemini-3.5-flash-lite',
       contents: JSON.stringify(summaryData),
       config: {
         systemInstruction,
@@ -390,7 +390,7 @@ Trả lời câu hỏi của người dùng bằng tiếng Việt tự nhiên, t
   try {
     const ai = getGenAI();
     const response = await ai.models.generateContent({
-      model: 'gemini-3.7-flash',
+      model: 'gemini-3.5-flash-lite',
       contents: `Câu hỏi người dùng: "${question}"`,
       config: {
         systemInstruction,

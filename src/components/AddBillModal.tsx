@@ -142,25 +142,38 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
   }, [wallets, isOpen]);
 
   useEffect(() => {
-    if (categories && categories.length > 0) {
-      setLocalCategories(categories);
-      if (!categoryId) {
-        const defaultCat =
-          categories.find((c) => c.type === 'EXPENSE' && (c.name.includes('Ăn') || c.name.includes('Nhóm'))) ||
-          categories[0];
-        if (defaultCat) setCategoryId(defaultCat.id);
-      }
-    } else {
-      api.categories.getAll().then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setLocalCategories(data);
+    const fetchCats = async () => {
+      try {
+        const data = await api.categories.getAll();
+        const catList = Array.isArray(data) ? data : ((data as any)?.categories || (data as any)?.data || []);
+        if (catList.length > 0) {
+          setLocalCategories(catList);
           if (!categoryId) {
             const defaultCat =
-              data.find((c) => c.type === 'EXPENSE' && (c.name.includes('Ăn') || c.name.includes('Nhóm'))) || data[0];
-            if (defaultCat) setCategoryId(defaultCat.id);
+              catList.find((c: Category) => c.type === 'EXPENSE' && (c.name.includes('Ăn') || c.name.includes('Nhóm'))) ||
+              catList.find((c: Category) => c.type === 'EXPENSE') ||
+              catList[0];
+            if (defaultCat) setCategoryId(String(defaultCat.id));
           }
         }
-      });
+      } catch (e) {
+        console.warn('Failed to fetch categories in AddBillModal:', e);
+      }
+    };
+
+    if (isOpen) {
+      if (categories && categories.length > 0) {
+        setLocalCategories(categories);
+        if (!categoryId) {
+          const defaultCat =
+            categories.find((c) => c.type === 'EXPENSE' && (c.name.includes('Ăn') || c.name.includes('Nhóm'))) ||
+            categories.find((c) => c.type === 'EXPENSE') ||
+            categories[0];
+          if (defaultCat) setCategoryId(String(defaultCat.id));
+        }
+      } else {
+        fetchCats();
+      }
     }
   }, [categories, isOpen]);
 
@@ -497,10 +510,12 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
       const isGroupSelected = groupId && groupId !== 'none';
       const selectedGroup = isGroupSelected ? groups.find((g) => g.id === groupId) : null;
 
+      const finalCategoryId = categoryId ? (!isNaN(Number(categoryId)) ? Number(categoryId) : categoryId) : 1;
+
       await api.bills.create({
         groupId: isGroupSelected ? groupId : null,
         walletId: payerType === 'ME' ? walletId : undefined,
-        categoryId: categoryId || 'cat_001',
+        categoryId: finalCategoryId as any,
         totalAmount,
         description: title.trim(),
         items: itemsPayload,
