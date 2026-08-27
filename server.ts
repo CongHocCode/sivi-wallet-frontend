@@ -419,8 +419,8 @@ Trả lời câu hỏi của người dùng bằng tiếng Việt tự nhiên, t
 });
 
 // Search users API endpoint
-app.get('/api/auth/search', (req, res) => {
-  const q = String(req.query.q || '').toLowerCase().trim();
+const handleUserSearch = (req: any, res: any) => {
+  const q = String(req.query.keyword || req.query.q || '').toLowerCase().trim();
   const systemUsers = [
     { id: 'usr_002', username: 'an.nguyen', name: 'Nguyễn Văn An', fullName: 'Nguyễn Văn An', email: 'an.nguyen@sivi.vn', isGuest: false },
     { id: 'usr_003', username: 'lan.le', name: 'Lê Thị Lan', fullName: 'Lê Thị Lan', email: 'lan.le@gmail.com', isGuest: false },
@@ -445,7 +445,11 @@ app.get('/api/auth/search', (req, res) => {
   );
 
   return res.json(results);
-});
+};
+
+app.get('/api/users/search', handleUserSearch);
+app.get('/users/search', handleUserSearch);
+app.get('/api/auth/search', handleUserSearch);
 
 // --- VITE MIDDLEWARE SETUP ---
 async function startServer() {

@@ -224,10 +224,10 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
     }
   }, [groupId, groups, isOpen, myParticipant, currentUserName]);
 
-  // Tìm kiếm User thật qua api.auth.searchUsers khi người dùng gõ từ khóa
+  // Tìm kiếm User thật qua api.auth.searchUsers khi người dùng gõ từ khóa (Debounce 300ms, độ dài tối thiểu >= 2 ký tự)
   useEffect(() => {
     const q = searchQuery.trim();
-    if (!q) {
+    if (!q || q.length < 2) {
       setSearchResults([]);
       setIsSearchingUsers(false);
       return;
@@ -235,23 +235,26 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
 
     setIsSearchingUsers(true);
     let isMounted = true;
-    api.auth
-      .searchUsers(q)
-      .then((users) => {
-        if (isMounted) {
-          setSearchResults(users || []);
-          setIsSearchingUsers(false);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setSearchResults([]);
-          setIsSearchingUsers(false);
-        }
-      });
+    const timer = setTimeout(() => {
+      api.auth
+        .searchUsers(q)
+        .then((users) => {
+          if (isMounted) {
+            setSearchResults(users || []);
+            setIsSearchingUsers(false);
+          }
+        })
+        .catch(() => {
+          if (isMounted) {
+            setSearchResults([]);
+            setIsSearchingUsers(false);
+          }
+        });
+    }, 300);
 
     return () => {
       isMounted = false;
+      clearTimeout(timer);
     };
   }, [searchQuery]);
 

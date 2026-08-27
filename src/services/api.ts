@@ -379,7 +379,7 @@ const authModule = {
     const q = (keyword || '').toLowerCase().trim();
     if (!apiClient.getIsMockMode() && q) {
       try {
-        const res = await apiClient.request<User[]>(`/auth/search?q=${encodeURIComponent(q)}`);
+        const res = await apiClient.request<User[]>(`/users/search?keyword=${encodeURIComponent(q)}`);
         if (Array.isArray(res)) return res;
       } catch {}
     }
