@@ -18,7 +18,7 @@ import {
   HelpCircle,
   Zap,
 } from 'lucide-react';
-import { apiService } from '../services/api';
+import { api, apiService } from '../services/api';
 import { geminiService } from '../services/geminiService';
 import { Transaction, FinancialCoachResponse } from '../types';
 import { formatVND } from '../lib/formatters';
@@ -79,7 +79,7 @@ export const AICoachView: React.FC<AICoachViewProps> = ({
   const fetchAdvice = async () => {
     setIsLoadingCoach(true);
     try {
-      const data = await apiService.getFinancialCoachAdvice(
+      const data = await api.coach.getAdvice(
         monthlyIncome,
         monthlyExpense,
         transactions
@@ -156,7 +156,7 @@ export const AICoachView: React.FC<AICoachViewProps> = ({
     setIsSendingChat(true);
 
     try {
-      const res = await apiService.askFinancialCoachQuestion(
+      const res = await api.coach.askQuestion(
         textToSend,
         monthlyIncome,
         monthlyExpense,

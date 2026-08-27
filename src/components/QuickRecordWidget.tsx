@@ -16,7 +16,7 @@ import {
   CheckCircle2,
   FileText,
 } from 'lucide-react';
-import { apiService } from '../services/api';
+import { api, apiService } from '../services/api';
 import { geminiService } from '../services/geminiService';
 import { Wallet, Category, TransactionType } from '../types';
 import { formatVND, parseVNDInput } from '../lib/formatters';
@@ -67,7 +67,7 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
     setIsNlpLoading(true);
     setNlpSuccessMsg(null);
     try {
-      const parsed = await apiService.parseNaturalLanguageTransaction(nlpPrompt);
+      const parsed = await api.coach.parseNLP(nlpPrompt);
       const matchedWallet =
         wallets.find((w) =>
           w.name.toLowerCase().includes((parsed.walletName || '').toLowerCase())
@@ -79,7 +79,7 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
         ) || categories[0];
 
       if (matchedWallet) {
-        await apiService.addTransaction({
+        await api.transactions.create({
           walletId: matchedWallet.id,
           walletName: matchedWallet.name,
           categoryId: matchedCat?.id,
@@ -112,7 +112,7 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
       const selectedWallet = wallets.find((w) => w.id === manualWalletId) || wallets[0];
       const selectedCategory = categories.find((c) => c.id === manualCatId) || categories[0];
 
-      await apiService.addTransaction({
+      await api.transactions.create({
         walletId: selectedWallet.id,
         walletName: selectedWallet.name,
         categoryId: selectedCategory.id,
@@ -153,7 +153,7 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
         const defaultWallet = wallets[0];
         const defaultCat = categories[0];
 
-        await apiService.addTransaction({
+        await api.transactions.create({
           walletId: defaultWallet?.id || '',
           walletName: defaultWallet?.name,
           categoryId: defaultCat?.id,

@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { Wallet, Transaction, Category } from '../types';
 import { formatVND, formatVNDShort } from '../lib/formatters';
-import { apiService } from '../services/api';
+import { api } from '../services/api';
 
 interface WalletsViewProps {
   wallets: Wallet[];
@@ -165,7 +165,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
     setIsSavingEdit(true);
     setEditError(null);
     try {
-      await apiService.updateWallet(selectedWallet.id, {
+      await api.wallets.update(selectedWallet.id, {
         name: editName.trim(),
         bankName: editBankName.trim() || undefined,
         accountNumber: editAccountNumber.trim() || undefined,
@@ -194,7 +194,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
     if (!confirmDelete) return;
 
     try {
-      await apiService.deleteWallet(selectedWallet.id);
+      await api.wallets.delete(selectedWallet.id);
       await onRefreshData();
       handleCloseWalletDrawer();
     } catch (err: any) {

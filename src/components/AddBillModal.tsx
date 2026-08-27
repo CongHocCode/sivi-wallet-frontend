@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Receipt, Users, Calculator } from 'lucide-react';
-import { apiService } from '../services/api';
+import { api } from '../services/api';
 import { Group, SplitType, SplitDetail } from '../types';
 import { formatVND, parseVNDInput } from '../lib/formatters';
 
@@ -96,10 +96,10 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
     try {
       const payer = currentGroup.members.find((m) => m.id === payerMemberId);
 
-      await apiService.addGroupBill({
+      await api.bills.create({
         groupId: currentGroup.id,
         groupName: currentGroup.name,
-        title,
+        title: title.trim(),
         totalAmount,
         payerMemberId,
         payerMemberName: payer?.name || 'Thành viên',

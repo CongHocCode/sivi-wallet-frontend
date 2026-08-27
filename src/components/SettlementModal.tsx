@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { X, CheckCircle2, ArrowRight } from 'lucide-react';
-import { apiService } from '../services/api';
+import { api } from '../services/api';
 import { DebtSummary, Wallet } from '../types';
 import { formatVND } from '../lib/formatters';
 
@@ -39,7 +39,7 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({
     setError(null);
 
     try {
-      await apiService.settleDebt(
+      await api.bills.settleDebt(
         debt.debtorName,
         debt.creditorName,
         debt.amount,

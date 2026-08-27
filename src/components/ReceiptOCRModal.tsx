@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, Sparkles, Check, X, AlertCircle, Plus, Trash2, MessageSquare, ArrowLeft } from 'lucide-react';
-import { apiService } from '../services/api';
+import { api } from '../services/api';
 import { geminiService } from '../services/geminiService';
 import { ReceiptOCRResult, Wallet, Category, TransactionType } from '../types';
 import { formatVND } from '../lib/formatters';
@@ -255,7 +255,7 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
       if (onSave) {
         await onSave(newTransaction);
       } else {
-        await apiService.addTransaction(newTransaction);
+        await api.transactions.create(newTransaction);
         onSuccess();
         onClose();
       }

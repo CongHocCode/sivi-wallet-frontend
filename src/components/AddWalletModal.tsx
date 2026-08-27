@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { X, Wallet as WalletIcon, Building2, Smartphone, Banknote } from 'lucide-react';
-import { apiService } from '../services/api';
+import { api } from '../services/api';
 import { WalletType } from '../types';
 import { parseVNDInput, formatVND } from '../lib/formatters';
 
@@ -55,11 +55,11 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
         color = '#10B981';
       }
 
-      await apiService.addWallet({
-        name,
+      await api.wallets.create({
+        name: name.trim(),
         type,
         balance: parsedBalance,
-        accountNumber: accountNumber || undefined,
+        accountNumber: accountNumber ? accountNumber.trim() : undefined,
         bankName: type === 'BANK' ? bankName : undefined,
         icon,
         color,
@@ -67,6 +67,10 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ isOpen, onClose,
 
       onSuccess();
       onClose();
+      // Reset form
+      setName('');
+      setBalanceInput('');
+      setAccountNumber('');
     } catch (err: any) {
       setError(err.message || 'Lỗi khi tạo ví');
     } finally {

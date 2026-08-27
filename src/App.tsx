@@ -42,7 +42,8 @@ import {
   AudioLines,
 } from 'lucide-react';
 
-import { apiService } from './services/api';
+import { api, apiService } from './services/api';
+import { AuthModal } from './components/AuthModal';
 import { MobileQuickAddMenu } from './components/MobileQuickAddMenu';
 import { AnalyticsView } from './components/AnalyticsView';
 import { AICoachView } from './components/AICoachView';
@@ -190,6 +191,7 @@ export default function App() {
   const [bills, setBills] = useState<GroupBill[]>([]);
   const [debts, setDebts] = useState<DebtSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Quick NLP Prompt State in Top Search Bar
   const [quickNlpPrompt, setQuickNlpPrompt] = useState('');
@@ -230,18 +232,18 @@ export default function App() {
     setIsAddTxOpen(true);
   };
 
-  // Load All Data from API / LocalStorage
+  // Load All Data from API concurrently
   const loadAppData = async () => {
     setIsLoading(true);
     try {
       const [uData, wData, cData, tData, gData, bData, dData] = await Promise.all([
-        apiService.getCurrentUser(),
-        apiService.getWallets(),
-        apiService.getCategories(),
-        apiService.getTransactions(),
-        apiService.getGroups(),
-        apiService.getGroupBills(),
-        apiService.getDebtLedger(),
+        api.auth.getMe(),
+        api.wallets.getAll(),
+        api.categories.getAll(),
+        api.transactions.getAll(),
+        api.groups.getMyGroups(),
+        api.bills.getAll(),
+        api.bills.getDebts(),
       ]);
 
       setUser(uData);
@@ -258,9 +260,22 @@ export default function App() {
     }
   };
 
+  // Check Auth on Mount
   useEffect(() => {
-    loadAppData();
+    const hasToken = localStorage.getItem('sivi_token') || api.auth.isAuthenticated();
+    if (hasToken) {
+      loadAppData();
+    } else {
+      setIsLoading(false);
+      setIsAuthModalOpen(true);
+    }
   }, []);
+
+  const handleAuthSuccess = (uData: User) => {
+    setUser(uData);
+    setIsAuthModalOpen(false);
+    loadAppData();
+  };
 
   // Calculated Metrics
   const totalBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
@@ -1244,6 +1259,13 @@ export default function App() {
         wallets={wallets}
         categories={categories}
         onDelete={handleDeleteTransaction}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+        canDismiss={!!user}
       />
     </div>
   );
