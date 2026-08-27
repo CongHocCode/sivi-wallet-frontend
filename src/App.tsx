@@ -347,9 +347,11 @@ export default function App() {
 
   // Handlers
   const handleDeleteTransaction = async (id: string) => {
-    if (confirm('Bạn có chắc chắn muốn xóa giao dịch này?')) {
-      await apiService.deleteTransaction(id);
-      loadAppData();
+    try {
+      await api.transactions.delete(id);
+      await loadAppData();
+    } catch (err) {
+      console.error('Error deleting transaction:', err);
     }
   };
 
@@ -888,7 +890,11 @@ export default function App() {
                         </div>
 
                         <button
-                          onClick={() => handleDeleteTransaction(tx.id)}
+                          onClick={() => {
+                            if (window.confirm('Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được hoàn lại tự động.')) {
+                              handleDeleteTransaction(tx.id);
+                            }
+                          }}
                           className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-[#8C857D] hover:text-rose-500 rounded-lg transition"
                           title="Xóa giao dịch"
                         >
@@ -1333,6 +1339,7 @@ export default function App() {
         wallets={wallets}
         categories={categories}
         onDelete={handleDeleteTransaction}
+        onSuccess={loadAppData}
       />
 
       <AuthModal

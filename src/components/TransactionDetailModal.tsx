@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Transaction, Wallet, Category } from '../types';
 import { formatVND, getTxDate, formatTxDateTime } from '../lib/formatters';
+import { api } from '../services/api';
 
 interface TransactionDetailModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ interface TransactionDetailModalProps {
   wallets: Wallet[];
   categories: Category[];
   onDelete?: (id: string) => Promise<void> | void;
+  onSuccess?: () => void;
 }
 
 export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
@@ -42,9 +44,11 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   wallets,
   categories,
   onDelete,
+  onSuccess,
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showImageZoom, setShowImageZoom] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   if (!isOpen || !transaction) return null;
 
@@ -82,12 +86,24 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   };
 
   const handleDelete = async () => {
-    if (!onDelete) return;
+    if (!transaction) return;
     if (window.confirm('Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được hoàn lại tự động.')) {
       setIsDeleting(true);
       try {
-        await onDelete(transaction.id);
-        onClose();
+        await api.transactions.delete(transaction.id);
+        if (onDelete) {
+          await onDelete(transaction.id);
+        }
+        if (onSuccess) {
+          await onSuccess();
+        }
+        setToastMessage('Xóa giao dịch thành công');
+        setTimeout(() => {
+          onClose();
+        }, 800);
+      } catch (err: any) {
+        console.error('Delete transaction error:', err);
+        alert(err?.message || 'Có lỗi xảy ra khi xóa giao dịch');
       } finally {
         setIsDeleting(false);
       }
@@ -97,6 +113,14 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#2D2926]/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="relative w-full max-w-lg bg-white rounded-t-[28px] sm:rounded-3xl shadow-2xl overflow-hidden border border-[#EAE7DC] flex flex-col max-h-[90vh]">
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-[#7D8F69] text-white text-xs font-bold rounded-xl shadow-lg flex items-center gap-1.5 animate-in fade-in slide-in-from-top-2">
+            <CheckCircle2 className="w-4 h-4 text-white" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#EAE7DC] bg-[#F9F8F3]">
           <div className="flex items-center gap-2.5">
@@ -306,21 +330,17 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
 
         {/* Modal Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAE7DC] bg-[#F9F8F3]">
-          {onDelete ? (
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="px-3.5 py-2 text-xs font-bold text-[#D98B72] hover:bg-[#D98B72]/10 rounded-xl transition flex items-center gap-1.5"
-            >
-              <Trash2 className="w-4 h-4" /> {isDeleting ? 'Đang xóa...' : 'Xóa Giao Dịch'}
-            </button>
-          ) : (
-            <div />
-          )}
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="px-3.5 py-2 text-xs font-bold text-[#D98B72] hover:bg-[#D98B72]/10 rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" /> {isDeleting ? 'Đang xóa...' : 'Xóa Giao Dịch'}
+          </button>
 
           <button
             onClick={onClose}
-            className="px-5 py-2 text-xs font-bold text-white bg-[#7D8F69] hover:bg-[#687856] rounded-xl shadow-2xs transition"
+            className="px-5 py-2 text-xs font-bold text-white bg-[#7D8F69] hover:bg-[#687856] rounded-xl shadow-2xs transition cursor-pointer"
           >
             Đóng
           </button>

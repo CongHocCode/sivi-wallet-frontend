@@ -173,14 +173,17 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
 
     try {
       const result = await geminiService.parseNaturalLanguage(inputText);
+      const parsedType = (result.type === 'INCOME' || result.type === 'EXPENSE') ? result.type : 'EXPENSE';
+      const parsedDate = result.transactionDate || new Date().toISOString();
+
       const mappedResult: NLPParsedTransaction = {
-        type: 'EXPENSE',
-        amount: result.amount || 0,
+        type: parsedType,
+        amount: Number(result.amount) || 0,
         note: result.note || inputText,
-        category: result.category || 'Khác',
+        category: result.category || (parsedType === 'INCOME' ? 'Lương / Thu nhập' : 'Khác'),
         walletName: result.wallet || '',
-        date: new Date().toISOString().split('T')[0],
-        splitWith: result.splitWith || [],
+        date: parsedDate,
+        splitWith: Array.isArray(result.splitWith) ? result.splitWith : [],
       };
       setParsedTx(mappedResult);
 

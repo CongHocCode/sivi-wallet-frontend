@@ -116,26 +116,40 @@ app.post('/api/gemini/nlp-transaction', async (req, res) => {
       return res.status(400).json({ error: 'Nội dung nhập liệu không được để trống' });
     }
 
+    const currentRefTime = new Date().toISOString();
     const systemInstruction = `
 Bạn là trợ lý tài chính AI thông minh cho ứng dụng SIVI WALLET tại Việt Nam.
+Current Reference Time: ${currentRefTime}
+
 Nhiệm vụ của bạn là phân tích câu nói/văn bản tiếng Việt của người dùng và trích xuất thành JSON giao dịch tài chính chuẩn.
 
-Quy tắc chuyển đổi số tiền tiếng Việt:
+1. Quy tắc thời gian tương đối:
+- Tính toán thời gian tương đối ("lúc sáng", "sáng nay", "hôm nay", "hôm qua", "hôm kia", "trưa nay", "chiều nay", "tối qua", "hồi nãy", "vừa rồi") CHÍNH XÁC dựa trên Current Reference Time: ${currentRefTime}.
+- Nếu có nhắc đến buổi:
+  * Sáng: ~08:30:00
+  * Trưa: ~12:00:00
+  * Chiều: ~15:30:00
+  * Tối: ~19:30:00
+  * Đêm / Khuya: ~22:30:00
+- Nếu chỉ nhắc đến ngày không có buổi, giữ nguyên giờ/phút của Current Reference Time.
+- Định dạng date strictly YYYY-MM-DDTHH:mm:ss.
+
+2. Quy tắc chuyển đổi số tiền tiếng Việt:
 - "45k", "45 ngàn", "45 nghìn" -> 45000
 - "1.5tr", "1 tr rưỡi", "1 triệu 5" -> 1500000
-- "200" (nếu nói trong ngữ cảnh ăn uống/xe cộ) -> 200000 (hoặc 200k nếu logic phù hợp, 200k là mặc định phổ biến tại VN)
+- "200" (nếu nói trong ngữ cảnh ăn uống/xe cộ) -> 200000 (hoặc 200k nếu logic phù hợp)
 
-Xác định TransactionType:
-- EXPENSE: khi chi tiêu, ăn uống, mua sắm, trả tiền
-- INCOME: khi nhận lương, thưởng, thu tiền, được cho
+3. Xác định TransactionType:
+- EXPENSE: khi chi tiêu, ăn uống, mua sắm, trả tiền, đổ xăng, đi chợ
+- INCOME: khi nhận lương, thưởng, thu tiền, được cho, hoàn tiền, bán đồ
 - TRANSFER: khi chuyển tiền từ ví này sang ví khác
 - SETTLEMENT: khi trả nợ hoặc nhận tiền trả nợ nhóm
 
-Xác định Category:
-- Ăn uống, Đi lại & Xe cộ, Mua sắm, Hóa đơn & Tiện ích, Giải trí & Du lịch, Sức khỏe & Y tế, Lương & Thu nhập, Thưởng & Đầu tư, Chuyển khoản, Thanh toán nợ nhóm.
+4. Xác định Category:
+- Ăn uống, Di chuyển, Đi chợ / Siêu thị, Mua sắm, Hóa đơn & Tiện ích, Giải trí, Sức khỏe, Lương / Thu nhập, Khác.
 
-Xác định Ví (walletName):
-- Tiền mặt, Vietcombank, Ví MoMo, Techcombank, ZaloPay (Mặc định: Ví MoMo hoặc Tiền mặt nếu không đề cập).
+5. Xác định Ví (walletName):
+- Tiền mặt, Vietcombank, Ví MoMo, Techcombank, MB Bank, ZaloPay (Mặc định: Ví MoMo hoặc Tiền mặt nếu không đề cập).
     `;
 
     const response = await ai.models.generateContent({
