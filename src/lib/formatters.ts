@@ -175,3 +175,31 @@ export function parseVNDInput(input: string): number {
   const val = parseFloat(cleaned);
   return isNaN(val) ? 0 : val;
 }
+
+/**
+ * Trích xuất tên hiển thị dùng cho lời chào người dùng:
+ * - Ưu tiên sử dụng trường fullName (hoặc name) nhận từ API.
+ * - Nếu tên quá dài (> 12 ký tự) thì tự lấy chữ cuối cùng.
+ * - Nếu không có tên thì sử dụng username của user.
+ */
+export function getGreetingName(user?: any): string {
+  if (!user) return 'bạn';
+
+  const fullName = (user.fullName || user.name || '').trim();
+
+  if (fullName) {
+    if (fullName.length > 12) {
+      const parts = fullName.split(/\s+/);
+      const lastWord = parts[parts.length - 1];
+      return lastWord || fullName;
+    }
+    return fullName;
+  }
+
+  if (user.username && typeof user.username === 'string' && user.username.trim()) {
+    return user.username.trim();
+  }
+
+  return 'bạn';
+}
+

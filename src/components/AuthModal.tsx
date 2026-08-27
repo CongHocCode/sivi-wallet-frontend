@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { User } from '../types';
+import { getGreetingName } from '../lib/formatters';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -76,7 +77,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         password: String(loginPassword || ''),
       });
 
-      showToast('success', `Đăng nhập thành công! Chào mừng ${user.name || user.fullName || 'bạn'}.`);
+      showToast('success', `Đăng nhập thành công! Chào mừng ${getGreetingName(user)}.`);
       
       setTimeout(() => {
         onAuthSuccess(user);

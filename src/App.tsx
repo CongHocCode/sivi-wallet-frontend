@@ -59,7 +59,7 @@ import {
   DebtSummary,
   TransactionType,
 } from './types';
-import { formatVND, formatVNDShort, getTxDate, formatDate, formatTxDateTime, formatLocalISO } from './lib/formatters';
+import { formatVND, formatVNDShort, getTxDate, formatDate, formatTxDateTime, formatLocalISO, getGreetingName } from './lib/formatters';
 
 // Modals & Views
 import { AddTransactionModal } from './components/AddTransactionModal';
@@ -647,7 +647,7 @@ export default function App() {
                     if (hour < 12) return 'Chào buổi sáng';
                     if (hour < 18) return 'Chào buổi chiều';
                     return 'Chào buổi tối';
-                  })()}, {user?.name ? user.name.split(' ').pop() || user.name : 'Nam'}!
+                  })()}, {getGreetingName(user)}!
                 </h1>
                 <p className="text-xs text-[#8C857D] font-medium mt-0.5">
                   Hôm nay bạn đã chi tiêu <span className="font-bold text-[#D98B72]">{formatVND(todayExpense)}</span>
