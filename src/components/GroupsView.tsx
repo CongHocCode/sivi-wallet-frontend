@@ -90,7 +90,8 @@ export const GroupsView: React.FC<GroupsViewProps> = ({
             return (
               <div
                 key={g.id || Math.random()}
-                className="bg-white border border-[#EAE7DC] rounded-[28px] p-6 shadow-sm flex flex-col justify-between hover:border-[#7D8F69]/40 transition group"
+                onClick={() => onSelectGroupDetail && onSelectGroupDetail(g)}
+                className="bg-white border border-[#EAE7DC] rounded-[28px] p-6 shadow-sm flex flex-col justify-between hover:border-[#7D8F69]/60 transition cursor-pointer group"
               >
                 <div>
                   {/* Top bar */}
@@ -144,7 +145,10 @@ export const GroupsView: React.FC<GroupsViewProps> = ({
                 {/* Actions */}
                 <div className="mt-5 pt-3 border-t border-[#FAF9F5] flex gap-2">
                   <button
-                    onClick={() => onOpenAddBill(g.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenAddBill(g.id);
+                    }}
                     className="flex-1 py-2.5 bg-[#F1EFE7] hover:bg-[#EAE7DC] rounded-xl text-xs font-bold text-[#4A443F] transition text-center flex items-center justify-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5" />

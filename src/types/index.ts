@@ -83,6 +83,9 @@ export interface GroupMember {
   userId?: string | number;
   email?: string;
   avatarUrl?: string;
+  role?: string;
+  joinedAt?: string;
+  createdAt?: string;
 }
 
 export interface Group {
@@ -126,6 +129,7 @@ export interface GroupBill {
   splits: SplitDetail[];
   items?: BillItem[];
   date: string;
+  createdAt?: string;
   category?: string;
   note?: string;
 }

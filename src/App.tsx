@@ -74,6 +74,7 @@ import { FinancialCoachWidget } from './components/FinancialCoachWidget';
 import { SettingsModal } from './components/SettingsModal';
 import { QuickRecordWidget } from './components/QuickRecordWidget';
 import { GroupDebtDetailModal } from './components/GroupDebtDetailModal';
+import { GroupDetailModal } from './components/GroupDetailModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { TransactionHistoryView } from './components/TransactionHistoryView';
 import { TransactionDetailModal } from './components/TransactionDetailModal';
@@ -1147,15 +1148,15 @@ export default function App() {
       </nav>
 
       {/* ALL MODALS */}
-      <GroupDebtDetailModal
+      <GroupDetailModal
         isOpen={isGroupDetailOpen}
         onClose={() => {
           setIsGroupDetailOpen(false);
           setSelectedGroupForDetail(null);
         }}
         group={selectedGroupForDetail}
-        debts={debts}
-        bills={bills}
+        bills={safeBills}
+        debts={safeDebts}
         onSettleDebt={(debt) => {
           setSelectedDebtForSettle(debt);
           setIsSettleOpen(true);
@@ -1164,6 +1165,7 @@ export default function App() {
           setSelectedGroupIdForBill(groupId);
           setIsAddBillOpen(true);
         }}
+        onRefreshGroupData={loadAppData}
       />
       <MobileQuickAddMenu
         isOpen={isQuickAddMenuOpen}

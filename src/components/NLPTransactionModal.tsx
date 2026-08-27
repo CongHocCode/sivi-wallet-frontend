@@ -24,7 +24,7 @@ import {
 import { api } from '../services/api';
 import { geminiService } from '../services/geminiService';
 import { NLPParsedTransaction, Wallet, Category } from '../types';
-import { formatVND, toDateTimeLocalString } from '../lib/formatters';
+import { formatVND, toDateTimeLocalString, formatLocalISO } from '../lib/formatters';
 
 interface NLPTransactionModalProps {
   isOpen: boolean;
@@ -235,7 +235,7 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
 
       const parsedDate = parsedTx.date ? new Date(parsedTx.date) : new Date();
       const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
-      const transactionDate = safeDate.toISOString().slice(0, 19);
+      const transactionDate = formatLocalISO(safeDate);
 
       await api.transactions.create({
         walletId: selectedWalletId,

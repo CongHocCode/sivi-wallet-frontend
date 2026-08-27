@@ -5,6 +5,15 @@
 import { WalletType } from '../types';
 
 /**
+ * Format Date to Local ISO String (YYYY-MM-DDTHH:mm:ss) without UTC offset shifting
+ */
+export const formatLocalISO = (d: any = new Date()): string => {
+  const dateObj = getTxDate(d);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:${pad(dateObj.getSeconds())}`;
+};
+
+/**
  * Formats a Date or date string to local HTML 'datetime-local' value: 'YYYY-MM-DDTHH:mm'
  */
 export function toDateTimeLocalString(dateOrTx?: any): string {

@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Wallet, Category, TransactionType } from '../types';
-import { formatVND, parseVNDInput, toDateTimeLocalString } from '../lib/formatters';
+import { formatVND, parseVNDInput, toDateTimeLocalString, formatLocalISO } from '../lib/formatters';
 
 export type AddTransactionTab = 'expense' | 'income' | 'transfer' | 'EXPENSE' | 'INCOME' | 'TRANSFER';
 
@@ -182,7 +182,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         const selectedCategory = categories.find((c) => c.id === categoryId);
         const parsedDate = date ? new Date(date) : new Date();
         const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
-        const transactionDate = safeDate.toISOString().slice(0, 19);
+        const transactionDate = formatLocalISO(safeDate);
 
         await api.transactions.create({
           walletId: fromWalletId,

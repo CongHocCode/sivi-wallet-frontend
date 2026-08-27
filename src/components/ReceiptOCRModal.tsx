@@ -7,7 +7,7 @@ import { Camera, Upload, Sparkles, Check, X, AlertCircle, Plus, Trash2, MessageS
 import { api } from '../services/api';
 import { geminiService } from '../services/geminiService';
 import { ReceiptOCRResult, Wallet, Category, TransactionType } from '../types';
-import { formatVND } from '../lib/formatters';
+import { formatVND, formatLocalISO, toDateTimeLocalString } from '../lib/formatters';
 
 interface ReceiptOCRModalProps {
   isOpen: boolean;
@@ -153,7 +153,7 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
       if (selectedFile) {
         // Real Gemini AI multimodal OCR scan
         const result = await geminiService.scanReceipt(selectedFile, userNote || undefined);
-        const nowLocal = new Date().toISOString().substring(0, 16);
+        const nowLocal = toDateTimeLocalString(new Date());
         const mappedResult: ReceiptOCRResult = {
           merchantName: result.merchantName || 'Cửa hàng không rõ',
           totalAmount: result.totalAmount || 0,
@@ -238,7 +238,7 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
 
       const parsedDate = ocrResult.transactionDate ? new Date(ocrResult.transactionDate) : new Date();
       const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
-      const transactionDate = safeDate.toISOString().slice(0, 19);
+      const transactionDate = formatLocalISO(safeDate);
 
       const newTransaction = {
         walletId: finalWalletId,

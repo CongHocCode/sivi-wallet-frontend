@@ -35,7 +35,7 @@ import {
   Award,
 } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
-import { formatVND, getTxDate } from '../lib/formatters';
+import { formatVND, getTxDate, formatTxDateTime } from '../lib/formatters';
 
 interface AnalyticsViewProps {
   transactions: Transaction[];
@@ -516,27 +516,31 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <p className="text-xs text-[#8C857D] py-4 text-center">Không có khoản chi tiêu nào.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {topExpenses.map((tx, i) => (
-              <div
-                key={tx.id}
-                className="p-3 bg-[#F9F8F3] rounded-2xl border border-[#EAE7DC] flex items-center justify-between"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-[#D98B72]/15 text-[#D98B72] font-black text-xs flex items-center justify-center">
-                    #{i + 1}
+            {topExpenses.map((tx, i) => {
+              const txDate = new Date(tx.transactionDate || tx.date || tx.createdAt || Date.now());
+              const safeTxDate = isNaN(txDate.getTime()) ? new Date() : txDate;
+              return (
+                <div
+                  key={tx.id}
+                  className="p-3 bg-[#F9F8F3] rounded-2xl border border-[#EAE7DC] flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-[#D98B72]/15 text-[#D98B72] font-black text-xs flex items-center justify-center">
+                      #{i + 1}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#2D2926] line-clamp-1">{tx.note}</p>
+                      <p className="text-[10px] text-[#8C857D]">
+                        {tx.categoryName || 'Khác'} • {formatTxDateTime(safeTxDate, true)}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-[#2D2926] line-clamp-1">{tx.note}</p>
-                    <p className="text-[10px] text-[#8C857D]">
-                      {tx.categoryName || 'Khác'} • {new Date(tx.date).toLocaleDateString('vi-VN')}
-                    </p>
-                  </div>
+                  <span className="font-extrabold text-xs text-[#D98B72]">
+                    -{formatVND(tx.amount)}
+                  </span>
                 </div>
-                <span className="font-extrabold text-xs text-[#D98B72]">
-                  -{formatVND(tx.amount)}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

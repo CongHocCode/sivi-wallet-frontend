@@ -29,7 +29,7 @@ import {
 import { api } from '../services/api';
 import { geminiService } from '../services/geminiService';
 import { Wallet, Category, TransactionType } from '../types';
-import { formatVND, parseVNDInput, toDateTimeLocalString } from '../lib/formatters';
+import { formatVND, parseVNDInput, toDateTimeLocalString, formatLocalISO } from '../lib/formatters';
 
 interface QuickRecordWidgetProps {
   wallets: Wallet[];
@@ -196,7 +196,7 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
       if (matchedWallet) {
         const parsedDate = parsed.date ? new Date(parsed.date) : new Date();
         const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
-        const transactionDate = safeDate.toISOString().slice(0, 19);
+        const transactionDate = formatLocalISO(safeDate);
 
         await api.transactions.create({
           walletId: matchedWallet.id,
@@ -236,7 +236,7 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
 
       const validManualDate = manualDate ? new Date(manualDate) : new Date();
       const safeManualDate = isNaN(validManualDate.getTime()) ? new Date() : validManualDate;
-      const transactionDate = safeManualDate.toISOString().slice(0, 19);
+      const transactionDate = formatLocalISO(safeManualDate);
 
       // If user does not provide note, use the selected category name as the note!
       const categoryName = selectedCategory?.name || (manualType === 'EXPENSE' ? 'Chi tiêu' : 'Thu nhập');
@@ -344,7 +344,7 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
 
         const parsedDate = res.transactionDate ? new Date(res.transactionDate) : new Date();
         const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
-        const transactionDate = safeDate.toISOString().slice(0, 19);
+        const transactionDate = formatLocalISO(safeDate);
 
         await api.transactions.create({
           walletId: chosenWallet?.id || wallets[0]?.id || '',
