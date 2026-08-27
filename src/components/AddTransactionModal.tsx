@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Wallet, Category, TransactionType } from '../types';
-import { formatVND, parseVNDInput } from '../lib/formatters';
+import { formatVND, parseVNDInput, toDateTimeLocalString } from '../lib/formatters';
 
 export type AddTransactionTab = 'expense' | 'income' | 'transfer' | 'EXPENSE' | 'INCOME' | 'TRANSFER';
 
@@ -94,7 +94,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [toWalletId, setToWalletId] = useState<string>('');
   const [categoryId, setCategoryId] = useState('');
   const [note, setNote] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState<string>(toDateTimeLocalString(new Date()));
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -106,7 +106,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       setError(null);
       setAmountInput('');
       setNote('');
-      setDate(new Date().toISOString().split('T')[0]);
+      setDate(toDateTimeLocalString(new Date()));
 
       // Set initial wallet IDs
       const targetPreselected = preselectedWalletId ? String(preselectedWalletId) : '';
@@ -460,9 +460,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             </div>
 
             <div>
-              <label className="text-xs font-bold text-[#4A443F] block mb-1">Ngày giao dịch:</label>
+              <label className="text-xs font-bold text-[#4A443F] block mb-1">Ngày &amp; giờ giao dịch:</label>
               <input
-                type="date"
+                type="datetime-local"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full p-2.5 text-xs rounded-2xl border border-[#EAE7DC] bg-[#F9F8F3] text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"

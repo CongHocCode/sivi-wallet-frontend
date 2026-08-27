@@ -19,7 +19,7 @@ import {
 import { api, apiService } from '../services/api';
 import { geminiService } from '../services/geminiService';
 import { Wallet, Category, TransactionType } from '../types';
-import { formatVND, parseVNDInput } from '../lib/formatters';
+import { formatVND, parseVNDInput, toDateTimeLocalString } from '../lib/formatters';
 
 interface QuickRecordWidgetProps {
   wallets: Wallet[];
@@ -51,7 +51,7 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
   const [manualWalletId, setManualWalletId] = useState(wallets[0]?.id || '');
   const [manualCatId, setManualCatId] = useState(categories[0]?.id || '');
   const [manualNote, setManualNote] = useState('');
-  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualDate, setManualDate] = useState<string>(toDateTimeLocalString(new Date()));
   const [isManualSubmitting, setIsManualSubmitting] = useState(false);
 
   // OCR State

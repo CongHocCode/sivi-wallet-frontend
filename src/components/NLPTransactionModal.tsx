@@ -24,7 +24,7 @@ import {
 import { api } from '../services/api';
 import { geminiService } from '../services/geminiService';
 import { NLPParsedTransaction, Wallet, Category } from '../types';
-import { formatVND } from '../lib/formatters';
+import { formatVND, toDateTimeLocalString } from '../lib/formatters';
 
 interface NLPTransactionModalProps {
   isOpen: boolean;
@@ -174,7 +174,15 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
     try {
       const result = await geminiService.parseNaturalLanguage(inputText);
       const parsedType = (result.type === 'INCOME' || result.type === 'EXPENSE') ? result.type : 'EXPENSE';
-      const parsedDate = result.transactionDate || new Date().toISOString();
+      
+      // Determine predicted datetime in local format
+      let parsedDate = toDateTimeLocalString(new Date());
+      if (result.transactionDate) {
+        const testD = new Date(result.transactionDate);
+        if (!isNaN(testD.getTime())) {
+          parsedDate = toDateTimeLocalString(testD);
+        }
+      }
 
       const mappedResult: NLPParsedTransaction = {
         type: parsedType,
@@ -451,6 +459,22 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
                     ))}
                   </select>
                 </div>
+
+                <div className="col-span-2">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[#8C857D] font-bold block text-[11px]">
+                      Ngày &amp; giờ giao dịch:
+                    </span>
+                    <span className="text-[10px] text-[#7D8F69] font-bold">AI tự động điền &amp; có thể chỉnh sửa</span>
+                  </div>
+                  <input
+                    type="datetime-local"
+                    value={parsedTx.date ? parsedTx.date.slice(0, 16) : toDateTimeLocalString(new Date())}
+                    onChange={(e) => updateParsedTx('date', e.target.value)}
+                    className="w-full mt-0.5 p-2 text-xs font-semibold rounded-xl bg-white border border-[#EAE7DC] text-[#2D2926] focus:outline-none focus:ring-1 focus:ring-[#7D8F69]"
+                  />
+                </div>
+
                 <div className="col-span-2">
                   <span className="text-[#8C857D] font-bold block text-[11px]">Chia tiền với (dấu phẩy ngăn cách):</span>
                   <input

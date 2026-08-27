@@ -517,19 +517,14 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('transactions')}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'transactions' || activeTab === 'debts'
                 ? 'bg-[#F1EFE7] text-[#7D8F69]'
                 : 'text-[#8C857D] hover:bg-[#F9F8F3] hover:text-[#2D2926]'
             }`}
           >
-            <div className="flex items-center gap-3">
-              <ReceiptText className="w-5 h-5 text-[#7D8F69]" />
-              <span>Sổ Thu Chi & Nợ</span>
-            </div>
-            {debts.length > 0 && (
-              <span className="w-2 h-2 rounded-full bg-[#D98B72]" title={`${debts.length} khoản nợ cần theo dõi`} />
-            )}
+            <ReceiptText className="w-5 h-5 text-[#7D8F69]" />
+            <span>Sổ Thu Chi & Nợ</span>
           </button>
 
           <button
@@ -1167,7 +1162,7 @@ export default function App() {
 
         <button
           onClick={() => setActiveTab('transactions')}
-          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 relative ${
+          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 ${
             activeTab === 'transactions' || activeTab === 'debts'
               ? 'text-[#7D8F69] font-bold'
               : 'text-[#8C857D]'
@@ -1175,9 +1170,6 @@ export default function App() {
         >
           <ReceiptText className="w-5 h-5" />
           <span className="text-[10px]">Sổ Thu & Nợ</span>
-          {debts.length > 0 && (
-            <span className="absolute top-0.5 right-2 w-2 h-2 rounded-full bg-[#D98B72] ring-2 ring-white" />
-          )}
         </button>
 
         {/* Floating Quick Action Button (+) */}
