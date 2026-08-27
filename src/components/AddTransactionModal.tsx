@@ -192,7 +192,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           categoryIcon: selectedCategory?.icon || 'Tag',
           amount: parsedAmount,
           type,
-          note: note || (type === 'EXPENSE' ? 'Chi tiêu cá nhân' : 'Thu nhập'),
+          note: note.trim() || selectedCategory?.name || (type === 'EXPENSE' ? 'Chi tiêu' : 'Thu nhập'),
           date: transactionDate,
           transactionDate,
         });

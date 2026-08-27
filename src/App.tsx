@@ -885,12 +885,13 @@ export default function App() {
                         </div>
 
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             if (window.confirm('Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được hoàn lại tự động.')) {
                               handleDeleteTransaction(tx.id);
                             }
                           }}
-                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-[#8C857D] hover:text-rose-500 rounded-lg transition"
+                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-[#8C857D] hover:text-rose-500 rounded-lg transition cursor-pointer"
                           title="Xóa giao dịch"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1267,6 +1268,9 @@ export default function App() {
           setSelectedGroupIdForBill(undefined);
         }}
         groups={groups}
+        wallets={wallets}
+        categories={categories}
+        user={user}
         selectedGroupId={selectedGroupIdForBill}
         onSuccess={loadAppData}
       />

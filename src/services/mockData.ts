@@ -238,26 +238,27 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
 
 // Helper to calculate debt matrix from group bills
 export function calculateDebtMatrix(bills: GroupBill[]): DebtSummary[] {
-  const balances: Record<string, { name: string; balance: number; groupId: string; groupName: string }> = {};
+  const balances: Record<string, { memberId: string; name: string; balance: number; groupId: string; groupName: string }> = {};
 
   bills.forEach((bill) => {
-    const payerId = bill.payerMemberId;
-    const payerName = bill.payerMemberName;
-    const groupId = bill.groupId;
-    const groupName = bill.groupName || 'Nhóm';
+    const payerId = String(bill.payerMemberId || bill.payerId || 'usr_001');
+    const payerName = bill.payerMemberName || bill.payerName || 'Tôi';
+    const groupId = bill.groupId ? String(bill.groupId) : 'direct_split';
+    const groupName = bill.groupName || (bill.groupId ? 'Nhóm' : 'Chia lẻ cá nhân');
 
-    bill.splits.forEach((split) => {
-      if (split.memberId === payerId) return; // Self debt offset
+    (bill.splits || []).forEach((split) => {
+      const memberId = String(split.memberId);
+      if (memberId === payerId) return; // Self debt offset
 
       // Payer is owed money (+), split member owes money (-)
-      const keyPayer = `${groupId}_${payerId}`;
-      const keyMember = `${groupId}_${split.memberId}`;
+      const keyPayer = `${groupId}:::${payerId}`;
+      const keyMember = `${groupId}:::${memberId}`;
 
       if (!balances[keyPayer]) {
-        balances[keyPayer] = { name: payerName, balance: 0, groupId, groupName };
+        balances[keyPayer] = { memberId: payerId, name: payerName, balance: 0, groupId: bill.groupId || '', groupName };
       }
       if (!balances[keyMember]) {
-        balances[keyMember] = { name: split.memberName, balance: 0, groupId, groupName };
+        balances[keyMember] = { memberId, name: split.memberName, balance: 0, groupId: bill.groupId || '', groupName };
       }
 
       balances[keyPayer].balance += split.amount;
@@ -270,21 +271,21 @@ export function calculateDebtMatrix(bills: GroupBill[]): DebtSummary[] {
   // Convert net balances into pairwise debts
   Object.keys(balances).forEach((key1) => {
     const b1 = balances[key1];
-    if (b1.balance <= 0) return; // b1 is owed money
+    if (b1.balance <= 0) return; // b1 is owed money (creditor)
 
     Object.keys(balances).forEach((key2) => {
       const b2 = balances[key2];
-      if (b2.groupId !== b1.groupId || b2.balance >= 0) return; // b2 owes money
+      if (b2.groupId !== b1.groupId || b2.balance >= 0) return; // b2 owes money (debtor)
 
       const debtAmount = Math.min(b1.balance, Math.abs(b2.balance));
       if (debtAmount > 100) {
         debts.push({
-          debtorId: key2.split('_')[1],
+          debtorId: b2.memberId,
           debtorName: b2.name,
-          creditorId: key1.split('_')[1],
+          creditorId: b1.memberId,
           creditorName: b1.name,
           amount: Math.round(debtAmount),
-          groupId: b1.groupId,
+          groupId: b1.groupId || null,
           groupName: b1.groupName,
         });
 

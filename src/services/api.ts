@@ -12,6 +12,8 @@ import {
   Group,
   GroupMember,
   GroupBill,
+  SplitDetail,
+  BillItem,
   DebtSummary,
   ReceiptOCRResult,
   NLPParsedTransaction,
@@ -371,6 +373,104 @@ const authModule = {
     apiClient.setToken(null);
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
+  },
+
+  searchUsers: async (keyword: string): Promise<User[]> => {
+    const q = (keyword || '').toLowerCase().trim();
+    if (!apiClient.getIsMockMode() && q) {
+      try {
+        const res = await apiClient.request<User[]>(`/auth/search?q=${encodeURIComponent(q)}`);
+        if (Array.isArray(res)) return res;
+      } catch {}
+    }
+
+    // Default registered/system member pool for SIVI WALLET
+    const systemMembers: User[] = [
+      {
+        id: 'usr_002',
+        username: 'an.nguyen',
+        name: 'Nguyễn Văn An',
+        fullName: 'Nguyễn Văn An',
+        email: 'an.nguyen@sivi.vn',
+        isGuest: false,
+      },
+      {
+        id: 'usr_003',
+        username: 'lan.le',
+        name: 'Lê Thị Lan',
+        fullName: 'Lê Thị Lan',
+        email: 'lan.le@gmail.com',
+        isGuest: false,
+      },
+      {
+        id: 'usr_004',
+        username: 'hoang.pn',
+        name: 'Phạm Nhật Hoàng',
+        fullName: 'Phạm Nhật Hoàng',
+        email: 'hoang.pn@sivi.vn',
+        isGuest: false,
+      },
+      {
+        id: 'usr_005',
+        username: 'khoa.vu',
+        name: 'Vũ Anh Khoa',
+        fullName: 'Vũ Anh Khoa',
+        email: 'khoa.vu@gmail.com',
+        isGuest: false,
+      },
+      {
+        id: 'usr_006',
+        username: 'hung.nguyen',
+        name: 'Nguyễn Văn Hùng',
+        fullName: 'Nguyễn Văn Hùng',
+        email: 'hung.nguyen@sivi.vn',
+        isGuest: false,
+      },
+      {
+        id: 'usr_007',
+        username: 'yen.hoang',
+        name: 'Hoàng Yến',
+        fullName: 'Hoàng Yến',
+        email: 'yen.hoang@sivi.vn',
+        isGuest: false,
+      },
+      {
+        id: 'usr_008',
+        username: 'bao.dang',
+        name: 'Đặng Quốc Bảo',
+        fullName: 'Đặng Quốc Bảo',
+        email: 'bao.dang@sivi.vn',
+        isGuest: false,
+      },
+      {
+        id: 'usr_009',
+        username: 'minh.tran',
+        name: 'Trần Đức Minh',
+        fullName: 'Trần Đức Minh',
+        email: 'ducminh.dev@gmail.com',
+        isGuest: false,
+      },
+      {
+        id: 'usr_010',
+        username: 'phuong.le',
+        name: 'Lê Thu Phương',
+        fullName: 'Lê Thu Phương',
+        email: 'phuong.le@gmail.com',
+        isGuest: false,
+      },
+    ];
+
+    if (!q) {
+      return systemMembers;
+    }
+
+    return systemMembers.filter(
+      (u) =>
+        (u.name && u.name.toLowerCase().includes(q)) ||
+        (u.fullName && u.fullName.toLowerCase().includes(q)) ||
+        (u.username && u.username.toLowerCase().includes(q)) ||
+        (u.email && u.email.toLowerCase().includes(q))
+    );
   },
 };
 
@@ -761,13 +861,13 @@ const groupsModule = {
     }
 
     const memberList: GroupMember[] = memberInputs
-      ? memberInputs.map((m, idx) => ({
-          id: `m_${Date.now()}_${idx}`,
+      ? memberInputs.map((m: any, idx: number) => ({
+          id: m.id || `m_${Date.now()}_${idx}`,
           name: m.name,
           fullName: m.name,
           isGuest: m.isGuest,
           email: m.email,
-          userId: m.isGuest ? undefined : 'usr_' + idx,
+          userId: m.userId ? String(m.userId) : (m.isGuest ? undefined : 'usr_' + idx),
         }))
       : [{ id: 'usr_001', name: 'Trần Minh Nam (Tôi)', fullName: 'Trần Minh Nam', isGuest: false, userId: 'usr_001' }];
 
@@ -873,24 +973,61 @@ const billsModule = {
   },
 
   create: async (billData: CreateBillDto | Omit<GroupBill, 'id'>): Promise<GroupBill> => {
+    const title = billData.description || billData.title || 'Hóa đơn chi tiêu';
+    const effectiveGroupId = billData.groupId && billData.groupId !== 'none' ? String(billData.groupId) : null;
+    const groupName = billData.groupName || (effectiveGroupId ? 'Nhóm' : 'Chia lẻ cá nhân');
     const payerId = String(billData.payerMemberId || (billData as any).payerId || 'usr_001');
-    const payerName = billData.payerMemberName || (billData as any).payerName || 'Thành viên';
+    const isMePayer = payerId === 'usr_001' || payerId.includes('usr_001') || (billData.payerMemberName || '').includes('(Tôi)');
+    const payerName = billData.payerMemberName || (billData as any).payerName || (isMePayer ? 'Trần Minh Nam (Tôi)' : 'Bạn bè');
+
+    // Ensure splits are populated even if only items was sent
+    let splits: SplitDetail[] = billData.splits || [];
+    if ((!splits || splits.length === 0) && billData.items && billData.items.length > 0) {
+      splits = billData.items.map((item) => ({
+        memberId: String(item.userId),
+        memberName: item.isPaid ? payerName : `Thành viên (${item.userId})`,
+        amount: item.amountShare,
+      }));
+    }
 
     const newBill: GroupBill = {
       ...billData,
       id: 'bill_' + Date.now(),
+      groupId: effectiveGroupId,
+      groupName,
+      title,
+      description: title,
       payerMemberId: payerId,
       payerId: payerId,
       payerMemberName: payerName,
       payerName: payerName,
+      splitType: billData.splitType || 'EQUAL',
+      splits,
       date: billData.date || new Date().toISOString(),
     };
 
     if (!apiClient.getIsMockMode()) {
       try {
-        return await apiClient.request<GroupBill>(`/groups/${billData.groupId}/bills`, {
+        const endpoint = effectiveGroupId ? `/groups/${effectiveGroupId}/bills` : '/bills';
+        return await apiClient.request<GroupBill>(endpoint, {
           method: 'POST',
-          body: JSON.stringify(billData),
+          body: JSON.stringify({
+            groupId: effectiveGroupId,
+            walletId: isMePayer ? billData.walletId : undefined,
+            categoryId: billData.categoryId,
+            totalAmount: billData.totalAmount,
+            description: title,
+            items: billData.items || splits.map((s) => ({
+              userId: s.memberId,
+              amountShare: s.amount,
+              isPaid: s.memberId === payerId,
+            })),
+            title,
+            payerMemberId: payerId,
+            payerMemberName: payerName,
+            splits,
+            date: newBill.date,
+          }),
         });
       } catch {}
     }
@@ -898,22 +1035,32 @@ const billsModule = {
     const bills = apiClient.getFromStorage<GroupBill[]>(STORAGE_KEYS.BILLS) || INITIAL_BILLS;
     apiClient.setToStorage(STORAGE_KEYS.BILLS, [newBill, ...bills]);
 
-    const mySplit = billData.splits.find((s) => s.memberId === 'usr_001' || s.memberId === payerId);
-    if (mySplit && mySplit.amount > 0 && (payerId === 'usr_001' || payerId.includes('usr_001'))) {
+    // Handle wallet deduction & transaction log ONLY when "Tôi" is payer
+    if (isMePayer) {
       const wallets = await walletsModule.getAll();
-      const defaultWal = wallets[0];
-      if (defaultWal) {
+      const selectedWallet = billData.walletId
+        ? wallets.find((w) => w.id === billData.walletId) || wallets[0]
+        : wallets[0];
+
+      const categories = await categoriesModule.getAll();
+      const selectedCategory = billData.categoryId
+        ? categories.find((c) => c.id === billData.categoryId)
+        : categories.find((c) => c.name.includes('Ăn') || c.name.includes('Nhóm')) || categories[0];
+
+      if (selectedWallet) {
+        const expenseAmount = billData.totalAmount || 0;
         await transactionsModule.create({
-          walletId: defaultWal.id,
-          walletName: defaultWal.name,
-          amount: mySplit.amount,
+          walletId: selectedWallet.id,
+          walletName: selectedWallet.name,
+          categoryId: selectedCategory?.id,
+          categoryName: selectedCategory?.name || billData.category || 'Chi tiêu nhóm',
+          categoryIcon: selectedCategory?.icon || 'Users',
+          amount: expenseAmount,
           type: 'EXPENSE',
-          note: `Phần chi của tôi: ${billData.title} (${billData.groupName || 'Nhóm'})`,
-          date: billData.date || new Date().toISOString(),
-          groupId: billData.groupId,
-          groupName: billData.groupName,
-          categoryName: billData.category || 'Ăn uống',
-          categoryIcon: 'Users',
+          note: `Thanh toán: ${title} (${groupName})`,
+          date: newBill.date,
+          groupId: effectiveGroupId || undefined,
+          groupName,
         });
       }
     }

@@ -90,9 +90,10 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
     if (window.confirm('Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được hoàn lại tự động.')) {
       setIsDeleting(true);
       try {
-        await api.transactions.delete(transaction.id);
         if (onDelete) {
           await onDelete(transaction.id);
+        } else {
+          await api.transactions.delete(transaction.id);
         }
         if (onSuccess) {
           await onSuccess();

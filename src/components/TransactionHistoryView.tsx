@@ -236,55 +236,18 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
     <div className="space-y-5 animate-in fade-in duration-200">
       {/* Top Header & Sub-Tab Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-[#F1EFE7] flex items-center justify-center text-[#7D8F69]">
-              <ReceiptText className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-[#2D2926] tracking-tight">
-                Sổ Thu Chi & Nợ
-              </h2>
-              <p className="text-xs text-[#8C857D]">
-                Quản lý tập trung toàn bộ giao dịch, hóa đơn & công nợ nhóm
-              </p>
-            </div>
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-[#F1EFE7] flex items-center justify-center text-[#7D8F69]">
+            <ReceiptText className="w-5 h-5" />
           </div>
-        </div>
-
-        {/* Action Buttons (Scan, Voice, Manual Add) */}
-        <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          {onOpenOcrModal && (
-            <button
-              onClick={onOpenOcrModal}
-              className="px-3 py-2 rounded-xl bg-[#F1EFE7] hover:bg-[#EAE7DC] text-[#4A443F] text-xs font-bold transition flex items-center gap-1.5 border border-[#EAE7DC]"
-              title="Quét hóa đơn qua Camera/OCR"
-            >
-              <ScanLine className="w-4 h-4 text-[#7D8F69]" />
-              <span className="hidden xs:inline">Quét Hóa Đơn</span>
-              <span className="xs:hidden">Quét</span>
-            </button>
-          )}
-          {onOpenNlpModal && (
-            <button
-              onClick={onOpenNlpModal}
-              className="px-3 py-2 rounded-xl bg-[#F1EFE7] hover:bg-[#EAE7DC] text-[#4A443F] text-xs font-bold transition flex items-center gap-1.5 border border-[#EAE7DC]"
-              title="Ghi chép nhanh bằng giọng nói hoặc văn bản tự nhiên"
-            >
-              <AudioLines className="w-4 h-4 text-[#D98B72]" />
-              <span className="hidden xs:inline">Giọng Nói</span>
-              <span className="xs:hidden">Nói</span>
-            </button>
-          )}
-          {onOpenAddModal && (
-            <button
-              onClick={onOpenAddModal}
-              className="px-3.5 py-2 rounded-xl bg-[#7D8F69] hover:bg-[#687856] text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Ghi Giao Dịch</span>
-            </button>
-          )}
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-[#2D2926] tracking-tight">
+              Sổ Thu Chi & Nợ
+            </h2>
+            <p className="text-xs text-[#8C857D]">
+              Quản lý tập trung toàn bộ giao dịch, hóa đơn & công nợ nhóm
+            </p>
+          </div>
         </div>
       </div>
 
@@ -680,6 +643,45 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
                 );
               })
             )}
+          </div>
+
+          {/* Quick Action Bar for Sổ Giao Dịch (Quét, Nói, Ghi giao dịch) */}
+          <div className="pt-2 pb-1 sticky bottom-4 z-20">
+            <div className="bg-white/95 backdrop-blur-md border border-[#EAE7DC] rounded-2xl p-2 shadow-lg shadow-black/5 flex items-center justify-between gap-2 max-w-md mx-auto">
+              {onOpenOcrModal && (
+                <button
+                  type="button"
+                  onClick={onOpenOcrModal}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-[#F1EFE7] hover:bg-[#EAE7DC] text-[#4A443F] text-xs font-bold transition flex items-center justify-center gap-1.5 border border-[#EAE7DC] shadow-2xs"
+                  title="Quét hóa đơn qua Camera/OCR"
+                >
+                  <ScanLine className="w-4 h-4 text-[#7D8F69]" />
+                  <span className="truncate">Quét Hóa Đơn</span>
+                </button>
+              )}
+              {onOpenNlpModal && (
+                <button
+                  type="button"
+                  onClick={onOpenNlpModal}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-[#F1EFE7] hover:bg-[#EAE7DC] text-[#4A443F] text-xs font-bold transition flex items-center justify-center gap-1.5 border border-[#EAE7DC] shadow-2xs"
+                  title="Ghi chép nhanh bằng giọng nói hoặc văn bản tự nhiên"
+                >
+                  <AudioLines className="w-4 h-4 text-[#D98B72]" />
+                  <span className="truncate">Giọng Nói</span>
+                </button>
+              )}
+              {onOpenAddModal && (
+                <button
+                  type="button"
+                  onClick={onOpenAddModal}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-[#7D8F69] hover:bg-[#687856] text-white text-xs font-bold shadow-xs transition flex items-center justify-center gap-1.5"
+                  title="Ghi giao dịch thủ công"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="truncate">Ghi Giao Dịch</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

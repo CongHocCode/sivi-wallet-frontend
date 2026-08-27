@@ -102,11 +102,20 @@ export interface SplitDetail {
   percent?: number;
 }
 
+export interface BillItem {
+  userId: string | number;
+  amountShare: number;
+  isPaid: boolean;
+}
+
 export interface GroupBill {
   id: string;
-  groupId: string;
+  groupId?: string | null;
   groupName?: string;
   title: string;
+  description?: string;
+  walletId?: string;
+  categoryId?: string;
   totalAmount: number;
   payerMemberId?: string;
   payerId?: string;
@@ -114,6 +123,7 @@ export interface GroupBill {
   payerName?: string;
   splitType: SplitType;
   splits: SplitDetail[];
+  items?: BillItem[];
   date: string;
   category?: string;
   note?: string;
@@ -125,7 +135,7 @@ export interface DebtSummary {
   creditorId?: string;
   creditorName: string;
   amount: number;
-  groupId: string;
+  groupId?: string | null;
   groupName: string;
   billDetailId?: string;
 }
@@ -228,16 +238,20 @@ export interface AddGroupMemberDto {
 }
 
 export interface CreateBillDto {
-  groupId: string;
-  groupName?: string;
-  title: string;
+  groupId?: string | null;
+  walletId?: string;
+  categoryId?: string;
   totalAmount: number;
+  description?: string;
+  items?: BillItem[];
+  title?: string;
+  groupName?: string;
   payerMemberId?: string;
   payerId?: string;
   payerMemberName?: string;
   payerName?: string;
-  splitType: SplitType;
-  splits: SplitDetail[];
+  splitType?: SplitType;
+  splits?: SplitDetail[];
   date?: string;
   category?: string;
   note?: string;
