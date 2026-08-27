@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { formatLocalISO } from "../lib/formatters";
 
 // Retrieve Gemini API Key from Vite environment variables
 const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || "";
@@ -98,31 +99,32 @@ export const geminiService = {
    * Parses colloquial Vietnamese text/voice statements into structured financial payloads.
    */
   async parseNaturalLanguage(text: string) {
-    const currentRefTime = new Date().toISOString();
+    const currentRefTime = formatLocalISO(new Date());
 
     const prompt = `You are a Vietnamese Natural Language Financial Transaction Parser.
-Current Reference Time: ${currentRefTime}
+Current Reference Time (Local Time): ${currentRefTime}
 
 Analyze the user's input text in Vietnamese and extract structured financial transaction information into valid JSON.
 
 Instructions:
-1. Relative Datetime Calculation:
+1. Relative Datetime & Specific Hour Calculation:
    - Compute relative date and time ("lúc sáng", "sáng nay", "hôm nay", "hôm qua", "hôm kia", "trưa nay", "chiều nay", "tối qua", "hồi nãy", "vừa rồi") STRICTLY relative to the Current Reference Time: ${currentRefTime}.
-   - If a specific time of day is mentioned, use appropriate hours/minutes:
-     * Sáng (morning / sáng nay): ~08:30:00
-     * Trưa (noon / trưa nay): ~12:00:00
-     * Chiều (afternoon / chiều nay): ~15:30:00
-     * Tối (evening / tối qua / tối nay): ~19:30:00
+   - Nếu người dùng nói giờ cụ thể (VD: '2h sáng' -> 02:00, '3h chiều' -> 15:00, 'trưa nay' -> 12:00, '8h tối' -> 20:00, '14h30' -> 14:30), BẮT BUỘC tính đúng giờ:phút đó vào transactionDate (định dạng YYYY-MM-DDTHH:mm hoặc YYYY-MM-DDTHH:mm:ss).
+   - Nếu có nhắc đến buổi chung chung mà không có số giờ cụ thể:
+     * Sáng (morning): ~08:30:00
+     * Trưa (noon): ~12:00:00
+     * Chiều (afternoon): ~15:30:00
+     * Tối (evening): ~19:30:00
      * Đêm / Khuya: ~22:30:00
-   - If only the date is mentioned (e.g., "hôm qua", "hôm nay") without a specific time of day, preserve the current hour and minute from the Current Reference Time.
-   - Format "transactionDate" strictly as an ISO-8601 string: YYYY-MM-DDTHH:mm:ss.
+   - Nếu chỉ nhắc đến ngày không có giờ/buổi, giữ nguyên giờ:phút của Current Reference Time.
+   - Format "transactionDate" strictly as an ISO string in local time: YYYY-MM-DDTHH:mm:ss.
 
 2. Transaction Type Inference:
-   - "INCOME": if the text mentions salary, bonus, receiving money, cash gift, interest, sales revenue, refund (e.g., "nhận lương", "lương về", "được thưởng", "nhận tiền", "được cho", "chuyển khoản đến", "bán đồ", "hoàn tiền", "khách trả tiền").
+   - "INCOME": if salary, bonus, receiving money, cash gift, interest, sales revenue, refund (e.g., "nhận lương", "lương về", "được thưởng", "nhận tiền", "được cho", "chuyển khoản đến", "bán đồ", "hoàn tiền", "khách trả tiền").
    - "EXPENSE": if buying, paying, spending, eating, transport, shopping, bills (e.g., "ăn", "uống", "mua", "chi", "trả tiền", "chuyển khoản đi", "đi chợ", "siêu thị", "đổ xăng", "nạp tiền").
 
 3. Amount Parsing:
-   - Extract the numeric amount. Convert Vietnamese colloquial numbers:
+   - Extract numeric amount. Convert Vietnamese colloquial numbers:
      * "k", "nghìn", "ngàn" -> * 1,000 (e.g., 45k -> 45000)
      * "tr", "triệu", "củ" -> * 1,000,000 (e.g., 25 triệu -> 25000000, 2.5tr -> 2500000)
      * "lít", "lốp" -> 100,000 / 500,000

@@ -70,10 +70,17 @@ const findMatchingCategory = (text: string, categories: Category[]): Category | 
   return partial;
 };
 
-/** Fuzzy match a string against wallet names */
+/** Fuzzy match a string against wallet names with specialized MoMo matching */
 const findMatchingWallet = (text: string, wallets: Wallet[]): Wallet | undefined => {
   const lower = (text || '').toLowerCase().trim();
   if (!lower) return undefined;
+  
+  // Prioritize MoMo if text contains momo
+  if (lower.includes('momo')) {
+    const momoWallet = wallets.find((w) => w.name.toLowerCase().includes('momo'));
+    if (momoWallet) return momoWallet;
+  }
+  
   const exact = wallets.find((w) => w.name.toLowerCase() === lower);
   if (exact) return exact;
   const partial = wallets.find(
@@ -102,6 +109,32 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
 
   const safeWallets = Array.isArray(wallets) ? wallets : [];
   const safeCategories = Array.isArray(categories) ? categories : [];
+
+  const resetForm = () => {
+    setPrompt('');
+    setParsedTx(null);
+    setError(null);
+    setIsLoading(false);
+    setIsRecording(false);
+    setIsSaving(false);
+    if (safeWallets.length > 0) {
+      setSelectedWalletId(safeWallets[0].id);
+    }
+    if (safeCategories.length > 0) {
+      setSelectedCategoryId(safeCategories[0].id);
+    }
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (safeWallets.length > 0 && !selectedWalletId) {
@@ -175,12 +208,17 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
       const result = await geminiService.parseNaturalLanguage(inputText);
       const parsedType = (result.type === 'INCOME' || result.type === 'EXPENSE') ? result.type : 'EXPENSE';
       
-      // Determine predicted datetime in local format
+      // Determine predicted datetime in local format (YYYY-MM-DDTHH:mm)
       let parsedDate = toDateTimeLocalString(new Date());
-      if (result.transactionDate) {
-        const testD = new Date(result.transactionDate);
-        if (!isNaN(testD.getTime())) {
-          parsedDate = toDateTimeLocalString(testD);
+      if (result.transactionDate && typeof result.transactionDate === 'string') {
+        const trimmed = result.transactionDate.trim();
+        if (trimmed.length >= 16) {
+          parsedDate = trimmed.slice(0, 16);
+        } else {
+          const testD = new Date(trimmed);
+          if (!isNaN(testD.getTime())) {
+            parsedDate = toDateTimeLocalString(testD);
+          }
         }
       }
 
@@ -203,11 +241,15 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
         }
       }
 
-      // Auto-match wallet from Gemini result
-      if (mappedResult.walletName) {
-        const matchedWallet = findMatchingWallet(mappedResult.walletName, safeWallets);
+      // Auto-match wallet (including MoMo) from Gemini result or original input text
+      const searchTarget = mappedResult.walletName || inputText;
+      if (searchTarget) {
+        const matchedWallet = findMatchingWallet(searchTarget, safeWallets);
         if (matchedWallet) {
           setSelectedWalletId(matchedWallet.id);
+        } else if (inputText.toLowerCase().includes('momo')) {
+          const momoWallet = safeWallets.find((w) => w.name.toLowerCase().includes('momo'));
+          if (momoWallet) setSelectedWalletId(momoWallet.id);
         }
       }
     } catch (err: any) {
@@ -233,9 +275,20 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
         finalNote += ` (Chia với: ${parsedTx.splitWith.join(', ')})`;
       }
 
-      const parsedDate = parsedTx.date ? new Date(parsedTx.date) : new Date();
-      const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
-      const transactionDate = formatLocalISO(safeDate);
+      // Format transactionDate directly as local ISO string YYYY-MM-DDTHH:mm:ss WITHOUT .toISOString()
+      let transactionDate = '';
+      if (parsedTx.date) {
+        const dStr = parsedTx.date.trim();
+        if (dStr.length === 16) {
+          transactionDate = `${dStr}:00`;
+        } else if (dStr.length >= 19) {
+          transactionDate = dStr.slice(0, 19);
+        } else {
+          transactionDate = formatLocalISO(new Date(dStr));
+        }
+      } else {
+        transactionDate = formatLocalISO(new Date());
+      }
 
       await api.transactions.create({
         walletId: selectedWalletId,
@@ -251,9 +304,9 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
       });
 
       onSuccess();
+      resetForm();
       onClose();
     } catch (err: any) {
-      // Keep modal open on error – show API error message
       const apiMsg = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi lưu giao dịch';
       setError(apiMsg);
     } finally {
@@ -276,7 +329,7 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1.5 rounded-full text-[#8C857D] hover:text-[#2D2926] hover:bg-[#EAE7DC] transition"
           >
             <X className="w-5 h-5" />
@@ -493,7 +546,7 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-[#EAE7DC] bg-[#F9F8F3] shrink-0">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="px-4 py-2 text-xs font-bold text-[#8C857D] hover:bg-[#EAE7DC] rounded-xl transition"
           >
             Hủy

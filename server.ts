@@ -137,22 +137,25 @@ app.post('/api/gemini/nlp-transaction', async (req, res) => {
     return res.status(400).json({ error: 'Nội dung nhập liệu không được để trống' });
   }
 
-  const currentRefTime = new Date().toISOString();
+  const dateObj = new Date();
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const currentRefTime = `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:${pad(dateObj.getSeconds())}`;
   const systemInstruction = `
 Bạn là trợ lý tài chính AI thông minh cho ứng dụng SIVI WALLET tại Việt Nam.
-Current Reference Time: ${currentRefTime}
+Current Reference Time (Giờ địa phương): ${currentRefTime}
 
 Nhiệm vụ của bạn là phân tích câu nói/văn bản tiếng Việt của người dùng và trích xuất thành JSON giao dịch tài chính chuẩn.
 
-1. Quy tắc thời gian tương đối:
+1. Quy tắc thời gian tương đối & Giờ cụ thể:
 - Tính toán thời gian tương đối ("lúc sáng", "sáng nay", "hôm nay", "hôm qua", "hôm kia", "trưa nay", "chiều nay", "tối qua", "hồi nãy", "vừa rồi") CHÍNH XÁC dựa trên Current Reference Time: ${currentRefTime}.
-- Nếu có nhắc đến buổi:
+- Nếu người dùng nói giờ cụ thể (VD: '2h sáng' -> 02:00, '3h chiều' -> 15:00, 'trưa nay' -> 12:00, '8h tối' -> 20:00, '14h30' -> 14:30), BẮT BUỘC tính đúng giờ:phút đó vào transactionDate (định dạng YYYY-MM-DDTHH:mm:ss).
+- Nếu có nhắc đến buổi chung chung mà không có số giờ cụ thể:
   * Sáng: ~08:30:00
   * Trưa: ~12:00:00
   * Chiều: ~15:30:00
   * Tối: ~19:30:00
   * Đêm / Khuya: ~22:30:00
-- Nếu chỉ nhắc đến ngày không có buổi, giữ nguyên giờ/phút của Current Reference Time.
+- Nếu chỉ nhắc đến ngày không có giờ/buổi, giữ nguyên giờ/phút của Current Reference Time.
 - Định dạng date strictly YYYY-MM-DDTHH:mm:ss.
 
 2. Quy tắc chuyển đổi số tiền tiếng Việt:
