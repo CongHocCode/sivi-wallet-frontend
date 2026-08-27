@@ -776,10 +776,10 @@ export default function App() {
                     />
                   </div>
 
-                  <div className="flex items-center gap-1 p-1 bg-[#F9F8F3] rounded-xl border border-[#EAE7DC] overflow-x-auto no-scrollbar max-w-full">
+                  <div className="grid grid-cols-5 sm:flex items-center gap-1 p-1 bg-[#F9F8F3] rounded-xl border border-[#EAE7DC] w-full sm:w-auto">
                     <button
                       onClick={() => setTxFilter('ALL')}
-                      className={`px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg whitespace-nowrap transition ${
+                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${
                         txFilter === 'ALL' ? 'bg-white text-[#2D2926] shadow-2xs' : 'text-[#8C857D]'
                       }`}
                     >
@@ -787,7 +787,7 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => setTxFilter('EXPENSE')}
-                      className={`px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg whitespace-nowrap transition ${
+                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${
                         txFilter === 'EXPENSE' ? 'bg-white text-[#D98B72] shadow-2xs' : 'text-[#8C857D]'
                       }`}
                     >
@@ -795,7 +795,7 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => setTxFilter('INCOME')}
-                      className={`px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg whitespace-nowrap transition ${
+                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${
                         txFilter === 'INCOME' ? 'bg-white text-[#7D8F69] shadow-2xs' : 'text-[#8C857D]'
                       }`}
                     >
@@ -803,15 +803,15 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => setTxFilter('TRANSFER')}
-                      className={`px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg whitespace-nowrap transition ${
+                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${
                         txFilter === 'TRANSFER' ? 'bg-white text-blue-600 shadow-2xs' : 'text-[#8C857D]'
                       }`}
                     >
-                      Chuyển khoản
+                      Chuyển ví
                     </button>
                     <button
                       onClick={() => setTxFilter('SETTLEMENT')}
-                      className={`px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg whitespace-nowrap transition ${
+                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${
                         txFilter === 'SETTLEMENT' ? 'bg-white text-emerald-600 shadow-2xs' : 'text-[#8C857D]'
                       }`}
                     >

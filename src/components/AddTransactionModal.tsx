@@ -387,7 +387,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             />
 
             {/* Quick Amount Preset Chips */}
-            <div className="flex items-center gap-1.5 mt-2 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex flex-wrap items-center gap-1.5 mt-2 pb-1">
               {[20000, 50000, 100000, 200000, 500000, 1000000, 2000000].map((preset) => (
                 <button
                   key={preset}

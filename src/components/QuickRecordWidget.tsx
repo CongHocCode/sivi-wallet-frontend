@@ -385,39 +385,42 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
           Ghi giao dịch nhanh
         </span>
 
-        <div className="flex items-center gap-1 bg-[#F9F8F3] p-0.5 sm:p-1 rounded-xl sm:rounded-2xl border border-[#EAE7DC] overflow-x-auto no-scrollbar">
+        <div className="grid grid-cols-3 gap-1 bg-[#F9F8F3] p-1 rounded-xl sm:rounded-2xl border border-[#EAE7DC] w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setActiveTab('nlp')}
-            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 transition whitespace-nowrap ${
+            className={`justify-center text-center px-1.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 transition ${
               activeTab === 'nlp'
                 ? 'bg-[#7D8F69] text-white shadow-2xs'
                 : 'text-[#8C857D] hover:text-[#2D2926]'
             }`}
           >
-            <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> AI Nhập nhanh
+            <Sparkles className="w-3.5 h-3.5 shrink-0" />
+            <span className="leading-tight">AI Nhập</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('ocr')}
-            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 transition whitespace-nowrap ${
+            className={`justify-center text-center px-1.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 transition ${
               activeTab === 'ocr'
                 ? 'bg-[#7D8F69] text-white shadow-2xs'
                 : 'text-[#8C857D] hover:text-[#2D2926]'
             }`}
           >
-            <Camera className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Quét Hóa Đơn
+            <Camera className="w-3.5 h-3.5 shrink-0" />
+            <span className="leading-tight">Quét Hóa Đơn</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('manual')}
-            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 transition whitespace-nowrap ${
+            className={`justify-center text-center px-1.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 transition ${
               activeTab === 'manual'
                 ? 'bg-[#7D8F69] text-white shadow-2xs'
                 : 'text-[#8C857D] hover:text-[#2D2926]'
             }`}
           >
-            <Edit3 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Thủ Công
+            <Edit3 className="w-3.5 h-3.5 shrink-0" />
+            <span className="leading-tight">Thủ Công</span>
           </button>
         </div>
       </div>
@@ -639,7 +642,7 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex flex-wrap items-center gap-1.5 pb-1">
               {availableCategories.map((cat) => {
                 const IconComponent = getCategoryIconComponent(cat.icon, cat.name);
                 const isSelected = manualCatId === cat.id;

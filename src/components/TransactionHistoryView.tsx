@@ -80,6 +80,17 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
 
   const [selectedYear, setSelectedYear] = useState<number | 'ALL'>(currentYear);
   const [selectedMonth, setSelectedMonth] = useState<number | 'ALL'>('ALL');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Active filters count for badge
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (selectedWalletId !== 'ALL') count++;
+    if (selectedType !== 'ALL') count++;
+    if (selectedMonth !== 'ALL') count++;
+    if (selectedYear !== 'ALL') count++;
+    return count;
+  }, [selectedWalletId, selectedType, selectedMonth, selectedYear]);
 
   // Selected transaction for detail modal
   const [selectedTxForDetail, setSelectedTxForDetail] = useState<Transaction | null>(null);
@@ -353,17 +364,17 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
             </div>
           </div>
 
-          {/* Filter Bar */}
-          <div className="bg-white border border-[#EAE7DC] rounded-2xl p-3.5 sm:p-4 shadow-2xs space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5">
+          {/* Consolidated Filter Bar */}
+          <div className="bg-white border border-[#EAE7DC] rounded-2xl p-3 sm:p-4 shadow-2xs space-y-3">
+            <div className="flex items-center gap-2">
               {/* Search Input */}
-              <div className="lg:col-span-4 relative">
+              <div className="flex-1 relative">
                 <Search className="w-4 h-4 text-[#8C857D] absolute left-3 top-2.5" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Tìm theo nội dung, địa điểm, số tiền..."
+                  placeholder="Tìm nội dung, địa điểm, số tiền..."
                   className="w-full pl-9 pr-8 py-2 text-xs font-medium rounded-xl bg-[#F9F8F3] border border-[#EAE7DC] text-[#2D2926] placeholder:text-[#8C857D] focus:outline-none focus:ring-1.5 focus:ring-[#7D8F69]"
                 />
                 {searchTerm && (
@@ -376,138 +387,137 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
                 )}
               </div>
 
-              {/* Month Selector */}
-              <div className="lg:col-span-2">
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-                  className="w-full p-2 text-xs font-semibold rounded-xl bg-[#F9F8F3] border border-[#EAE7DC] text-[#2D2926] focus:outline-none focus:ring-1.5 focus:ring-[#7D8F69]"
-                >
-                  <option value="ALL">Tất cả tháng</option>
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                    <option key={m} value={m}>
-                      Tháng {m}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Year Selector */}
-              <div className="lg:col-span-2">
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-                  className="w-full p-2 text-xs font-semibold rounded-xl bg-[#F9F8F3] border border-[#EAE7DC] text-[#2D2926] focus:outline-none focus:ring-1.5 focus:ring-[#7D8F69]"
-                >
-                  <option value="ALL">Tất cả năm</option>
-                  {availableYears.map((y) => (
-                    <option key={y} value={y}>
-                      Năm {y}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Wallet Selector */}
-              <div className="lg:col-span-2">
-                <select
-                  value={selectedWalletId}
-                  onChange={(e) => setSelectedWalletId(e.target.value)}
-                  className="w-full p-2 text-xs font-semibold rounded-xl bg-[#F9F8F3] border border-[#EAE7DC] text-[#2D2926] focus:outline-none focus:ring-1.5 focus:ring-[#7D8F69]"
-                >
-                  <option value="ALL">Tất cả ví ({wallets.length})</option>
-                  {wallets.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Transaction Type Filter */}
-              <div className="lg:col-span-2">
-                <select
-                  value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value as any)}
-                  className="w-full p-2 text-xs font-semibold rounded-xl bg-[#F9F8F3] border border-[#EAE7DC] text-[#2D2926] focus:outline-none focus:ring-1.5 focus:ring-[#7D8F69]"
-                >
-                  <option value="ALL">Tất cả loại GD</option>
-                  <option value="EXPENSE">Chi tiêu</option>
-                  <option value="INCOME">Thu nhập</option>
-                  <option value="TRANSFER">Chuyển khoản</option>
-                  <option value="SETTLEMENT">Tất toán nợ</option>
-                </select>
-              </div>
+              {/* Filter Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={`px-3 py-2 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 shrink-0 ${
+                  isFilterOpen || activeFiltersCount > 0
+                    ? 'bg-[#7D8F69] text-white border-[#7D8F69] shadow-2xs'
+                    : 'bg-[#F9F8F3] text-[#4A443F] border-[#EAE7DC] hover:bg-[#F1EFE7]'
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span>Bộ Lọc</span>
+                {activeFiltersCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-white text-[#7D8F69] text-[10px] font-black flex items-center justify-center">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </button>
             </div>
 
-            {/* Quick Type Filter Chips */}
-            <div className="flex items-center gap-1.5 pt-1 overflow-x-auto no-scrollbar">
-              <button
-                onClick={() => setSelectedType('ALL')}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition whitespace-nowrap ${
-                  selectedType === 'ALL'
-                    ? 'bg-[#7D8F69] text-white shadow-2xs'
-                    : 'bg-[#F1EFE7] text-[#8C857D] hover:text-[#2D2926]'
-                }`}
-              >
-                Tất cả ({transactions.length})
-              </button>
-              <button
-                onClick={() => setSelectedType('EXPENSE')}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition whitespace-nowrap flex items-center gap-1 ${
-                  selectedType === 'EXPENSE'
-                    ? 'bg-[#D98B72] text-white shadow-2xs'
-                    : 'bg-[#F1EFE7] text-[#8C857D] hover:text-[#2D2926]'
-                }`}
-              >
-                <ArrowDownRight className="w-3.5 h-3.5" /> Chi tiêu
-              </button>
-              <button
-                onClick={() => setSelectedType('INCOME')}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition whitespace-nowrap flex items-center gap-1 ${
-                  selectedType === 'INCOME'
-                    ? 'bg-[#7D8F69] text-white shadow-2xs'
-                    : 'bg-[#F1EFE7] text-[#8C857D] hover:text-[#2D2926]'
-                }`}
-              >
-                <ArrowUpRight className="w-3.5 h-3.5" /> Thu nhập
-              </button>
-              <button
-                onClick={() => setSelectedType('TRANSFER')}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition whitespace-nowrap flex items-center gap-1 ${
-                  selectedType === 'TRANSFER'
-                    ? 'bg-[#4A443F] text-white shadow-2xs'
-                    : 'bg-[#F1EFE7] text-[#8C857D] hover:text-[#2D2926]'
-                }`}
-              >
-                <ArrowLeftRight className="w-3.5 h-3.5" /> Chuyển tiền
-              </button>
-              <button
-                onClick={() => setSelectedType('SETTLEMENT')}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition whitespace-nowrap flex items-center gap-1 ${
-                  selectedType === 'SETTLEMENT'
-                    ? 'bg-[#7D8F69] text-white shadow-2xs'
-                    : 'bg-[#F1EFE7] text-[#8C857D] hover:text-[#2D2926]'
-                }`}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" /> Tất toán
-              </button>
-
-              {(searchTerm || selectedWalletId !== 'ALL' || selectedType !== 'ALL' || selectedMonth !== 'ALL') && (
+            {/* Active Filters Bar */}
+            {(activeFiltersCount > 0 || searchTerm) && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[#F9F8F3]">
+                <span className="text-[10px] font-bold text-[#8C857D] uppercase tracking-wider">Đang lọc:</span>
+                {selectedType !== 'ALL' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#F1EFE7] text-[#4A443F] text-[11px] font-bold">
+                    {selectedType === 'EXPENSE' && 'Chi tiêu'}
+                    {selectedType === 'INCOME' && 'Thu nhập'}
+                    {selectedType === 'TRANSFER' && 'Chuyển tiền'}
+                    {selectedType === 'SETTLEMENT' && 'Tất toán'}
+                    <button onClick={() => setSelectedType('ALL')} className="hover:text-rose-600"><X className="w-3 h-3" /></button>
+                  </span>
+                )}
+                {selectedWalletId !== 'ALL' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#F1EFE7] text-[#4A443F] text-[11px] font-bold">
+                    Ví: {wallets.find(w => w.id === selectedWalletId)?.name || 'Đã chọn'}
+                    <button onClick={() => setSelectedWalletId('ALL')} className="hover:text-rose-600"><X className="w-3 h-3" /></button>
+                  </span>
+                )}
+                {selectedMonth !== 'ALL' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#F1EFE7] text-[#4A443F] text-[11px] font-bold">
+                    Tháng {selectedMonth}
+                    <button onClick={() => setSelectedMonth('ALL')} className="hover:text-rose-600"><X className="w-3 h-3" /></button>
+                  </span>
+                )}
+                {selectedYear !== 'ALL' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#F1EFE7] text-[#4A443F] text-[11px] font-bold">
+                    Năm {selectedYear}
+                    <button onClick={() => setSelectedYear('ALL')} className="hover:text-rose-600"><X className="w-3 h-3" /></button>
+                  </span>
+                )}
                 <button
                   onClick={() => {
                     setSearchTerm('');
                     setSelectedWalletId('ALL');
                     setSelectedType('ALL');
                     setSelectedMonth('ALL');
-                    setSelectedYear(currentYear);
+                    setSelectedYear('ALL');
                   }}
-                  className="ml-auto px-2.5 py-1 text-[11px] font-bold text-[#D98B72] hover:underline flex items-center gap-1 shrink-0"
+                  className="ml-auto text-[11px] font-bold text-[#D98B72] hover:underline"
                 >
-                  <X className="w-3.5 h-3.5" /> Xóa bộ lọc
+                  Xóa tất cả
                 </button>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Expandable Filter Details */}
+            {isFilterOpen && (
+              <div className="pt-2 border-t border-[#EAE7DC] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-in fade-in duration-200">
+                {/* Type Filter */}
+                <div>
+                  <label className="text-[10px] font-extrabold text-[#8C857D] uppercase block mb-1">Loại Giao Dịch</label>
+                  <select
+                    value={selectedType}
+                    onChange={(e) => setSelectedType(e.target.value as any)}
+                    className="w-full p-2 text-xs font-semibold rounded-xl bg-[#F9F8F3] border border-[#EAE7DC] text-[#2D2926]"
+                  >
+                    <option value="ALL">Tất cả loại giao dịch</option>
+                    <option value="EXPENSE">Chi tiêu</option>
+                    <option value="INCOME">Thu nhập</option>
+                    <option value="TRANSFER">Chuyển tiền</option>
+                    <option value="SETTLEMENT">Tất toán nợ</option>
+                  </select>
+                </div>
+
+                {/* Wallet Filter */}
+                <div>
+                  <label className="text-[10px] font-extrabold text-[#8C857D] uppercase block mb-1">Ví Tài Khoản</label>
+                  <select
+                    value={selectedWalletId}
+                    onChange={(e) => setSelectedWalletId(e.target.value)}
+                    className="w-full p-2 text-xs font-semibold rounded-xl bg-[#F9F8F3] border border-[#EAE7DC] text-[#2D2926]"
+                  >
+                    <option value="ALL">Tất cả ví ({wallets.length})</option>
+                    {wallets.map((w) => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Month Filter */}
+                <div>
+                  <label className="text-[10px] font-extrabold text-[#8C857D] uppercase block mb-1">Tháng</label>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                    className="w-full p-2 text-xs font-semibold rounded-xl bg-[#F9F8F3] border border-[#EAE7DC] text-[#2D2926]"
+                  >
+                    <option value="ALL">Tất cả các tháng</option>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <option key={m} value={m}>Tháng {m}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Year Filter */}
+                <div>
+                  <label className="text-[10px] font-extrabold text-[#8C857D] uppercase block mb-1">Năm</label>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                    className="w-full p-2 text-xs font-semibold rounded-xl bg-[#F9F8F3] border border-[#EAE7DC] text-[#2D2926]"
+                  >
+                    <option value="ALL">Tất cả các năm</option>
+                    {availableYears.map((y) => (
+                      <option key={y} value={y}>Năm {y}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Transactions List */}
@@ -645,8 +655,8 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
             )}
           </div>
 
-          {/* Quick Action Bar for Sổ Giao Dịch (Quét, Nói, Ghi giao dịch) */}
-          <div className="pt-2 pb-1 sticky bottom-4 z-20">
+          {/* Quick Action Bar for Sổ Giao Dịch (Quét, Nói, Ghi giao dịch) - Hidden on mobile as floating '+' button already exists */}
+          <div className="pt-2 pb-1 sticky bottom-4 z-20 hidden sm:block">
             <div className="bg-white/95 backdrop-blur-md border border-[#EAE7DC] rounded-2xl p-2 shadow-lg shadow-black/5 flex items-center justify-between gap-2 max-w-md mx-auto">
               {onOpenOcrModal && (
                 <button
@@ -729,7 +739,7 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
 
           {/* Group Filter for Debts */}
           {groups.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 onClick={() => setSelectedDebtGroupId('ALL')}
                 className={`px-3 py-1.5 text-xs font-bold rounded-xl transition whitespace-nowrap ${

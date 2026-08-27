@@ -774,11 +774,11 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                   </h4>
 
                   {/* Filter Chips */}
-                  <div className="flex items-center gap-1 p-1 bg-[#FAF9F5] rounded-xl border border-[#EAE7DC] overflow-x-auto no-scrollbar">
+                  <div className="grid grid-cols-4 sm:flex items-center gap-1 p-1 bg-[#FAF9F5] rounded-xl border border-[#EAE7DC] w-full sm:w-auto">
                     <button
                       type="button"
                       onClick={() => setStatementFilter('ALL')}
-                      className={`px-2 py-0.5 text-[10px] font-bold rounded-lg whitespace-nowrap transition ${
+                      className={`text-center px-1 sm:px-2 py-0.5 text-[10px] font-bold rounded-lg truncate transition ${
                         statementFilter === 'ALL'
                           ? 'bg-white text-[#2D2926] shadow-2xs font-extrabold'
                           : 'text-[#8C857D] hover:text-[#2D2926]'
@@ -789,7 +789,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setStatementFilter('EXPENSE')}
-                      className={`px-2 py-0.5 text-[10px] font-bold rounded-lg whitespace-nowrap transition ${
+                      className={`text-center px-1 sm:px-2 py-0.5 text-[10px] font-bold rounded-lg truncate transition ${
                         statementFilter === 'EXPENSE'
                           ? 'bg-white text-[#D98B72] shadow-2xs font-extrabold'
                           : 'text-[#8C857D] hover:text-[#D98B72]'
@@ -800,7 +800,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setStatementFilter('INCOME')}
-                      className={`px-2 py-0.5 text-[10px] font-bold rounded-lg whitespace-nowrap transition ${
+                      className={`text-center px-1 sm:px-2 py-0.5 text-[10px] font-bold rounded-lg truncate transition ${
                         statementFilter === 'INCOME'
                           ? 'bg-white text-[#7D8F69] shadow-2xs font-extrabold'
                           : 'text-[#8C857D] hover:text-[#7D8F69]'
@@ -811,7 +811,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setStatementFilter('TRANSFER')}
-                      className={`px-2 py-0.5 text-[10px] font-bold rounded-lg whitespace-nowrap transition ${
+                      className={`text-center px-1 sm:px-2 py-0.5 text-[10px] font-bold rounded-lg truncate transition ${
                         statementFilter === 'TRANSFER'
                           ? 'bg-white text-blue-600 shadow-2xs font-extrabold'
                           : 'text-[#8C857D] hover:text-blue-600'
