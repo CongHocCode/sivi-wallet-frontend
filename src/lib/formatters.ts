@@ -5,6 +5,39 @@
 import { WalletType } from '../types';
 
 /**
+ * Safely extract a valid Date object from a transaction or raw date input.
+ * Falls back to current Date if missing or invalid, preventing any 'Invalid Date' errors.
+ */
+export function getTxDate(tx: any): Date {
+  if (!tx) return new Date();
+  if (tx instanceof Date) {
+    return isNaN(tx.getTime()) ? new Date() : tx;
+  }
+  const raw = typeof tx === 'object' ? (tx.transactionDate || tx.date || tx.createdAt) : tx;
+  if (!raw) return new Date();
+  const parsed = new Date(raw);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+/**
+ * Format date nicely to 'dd/MM/yyyy HH:mm' or 'dd/MM/yyyy'
+ */
+export function formatTxDateTime(txOrDate: any, includeTime = true): string {
+  const d = getTxDate(txOrDate);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+
+  if (!includeTime) {
+    return `${day}/${month}/${year}`;
+  }
+
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
+
+/**
  * Format number to VND currency display: e.g. 45000 -> "45.000 đ"
  */
 export function formatVND(amount: number): string {
@@ -38,12 +71,11 @@ export function formatVNDShort(amount: number): string {
 }
 
 /**
- * Format ISO string to Vietnamese readable date e.g. "11/08/2026" or "Hôm nay, 14:30"
+ * Format ISO string or Transaction to Vietnamese readable date e.g. "11/08/2026 14:30" or "Hôm nay, 14:30"
  */
-export function formatDate(dateString: string): string {
+export function formatDate(dateOrTx: any): string {
   try {
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return dateString;
+    const d = getTxDate(dateOrTx);
 
     const now = new Date();
     const isToday =
@@ -62,9 +94,9 @@ export function formatDate(dateString: string): string {
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
 
-    return `${day}/${month}/${year}`;
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
   } catch {
-    return dateString;
+    return formatTxDateTime(dateOrTx);
   }
 }
 

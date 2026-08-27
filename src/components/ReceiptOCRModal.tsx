@@ -236,7 +236,9 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
         ? `${baseNote} — ${userNote}${ocrResult.rawNotes ? ' | ' + ocrResult.rawNotes : ''}`
         : `${baseNote}${ocrResult.rawNotes ? ' — ' + ocrResult.rawNotes : ''}`;
 
-      const transactionDate = new Date(ocrResult.transactionDate || Date.now()).toISOString().slice(0, 19);
+      const parsedDate = ocrResult.transactionDate ? new Date(ocrResult.transactionDate) : new Date();
+      const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+      const transactionDate = safeDate.toISOString().slice(0, 19);
 
       const newTransaction = {
         walletId: finalWalletId,

@@ -222,7 +222,9 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
         finalNote += ` (Chia với: ${parsedTx.splitWith.join(', ')})`;
       }
 
-      const transactionDate = new Date(parsedTx.date || Date.now()).toISOString().slice(0, 19);
+      const parsedDate = parsedTx.date ? new Date(parsedTx.date) : new Date();
+      const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+      const transactionDate = safeDate.toISOString().slice(0, 19);
 
       await api.transactions.create({
         walletId: selectedWalletId,

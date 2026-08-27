@@ -30,7 +30,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { Transaction, Wallet, Category, TransactionType, DebtSummary, Group, GroupBill } from '../types';
-import { formatVND, formatVNDShort } from '../lib/formatters';
+import { formatVND, formatVNDShort, getTxDate } from '../lib/formatters';
 import { TransactionDetailModal } from './TransactionDetailModal';
 
 interface TransactionHistoryViewProps {
@@ -92,7 +92,8 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
     const years = new Set<number>([currentYear]);
     transactions.forEach((tx) => {
       try {
-        const y = new Date(tx.date).getFullYear();
+        const d = getTxDate(tx);
+        const y = d.getFullYear();
         if (!isNaN(y)) years.add(y);
       } catch {}
     });
@@ -113,7 +114,7 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
 
         // Date filter
         try {
-          const d = new Date(tx.date);
+          const d = getTxDate(tx);
           if (selectedYear !== 'ALL' && d.getFullYear() !== selectedYear) return false;
           if (selectedMonth !== 'ALL' && d.getMonth() + 1 !== selectedMonth) return false;
         } catch {}
@@ -133,7 +134,7 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
 
         return true;
       })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => getTxDate(b).getTime() - getTxDate(a).getTime());
   }, [transactions, selectedType, selectedWalletId, selectedYear, selectedMonth, searchTerm]);
 
   // Summary statistics for transactions
@@ -178,7 +179,11 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
   const groupedTransactions = useMemo(() => {
     const groupsMap: { [key: string]: Transaction[] } = {};
     filteredTransactions.forEach((tx) => {
-      const dateKey = tx.date ? tx.date.split('T')[0] : 'Không rõ ngày';
+      const d = getTxDate(tx);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const dateKey = `${year}-${month}-${day}`;
       if (!groupsMap[dateKey]) {
         groupsMap[dateKey] = [];
       }
@@ -193,8 +198,10 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;
       
-      const today = new Date().toISOString().split('T')[0];
-      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const todayObj = new Date();
+      const today = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+      const yesterdayObj = new Date(Date.now() - 86400000);
+      const yesterday = `${yesterdayObj.getFullYear()}-${String(yesterdayObj.getMonth() + 1).padStart(2, '0')}-${String(yesterdayObj.getDate()).padStart(2, '0')}`;
 
       let prefix = '';
       if (dateStr === today) prefix = 'Hôm nay, ';
@@ -213,10 +220,9 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
     }
   };
 
-  const formatTimeOnly = (isoString: string) => {
+  const formatTimeOnly = (txOrDate: any) => {
     try {
-      const d = new Date(isoString);
-      if (isNaN(d.getTime())) return '';
+      const d = getTxDate(txOrDate);
       return new Intl.DateTimeFormat('vi-VN', {
         hour: '2-digit',
         minute: '2-digit',
@@ -627,7 +633,7 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
 
                                 {/* Tags: Wallet, Category, Time */}
                                 <div className="flex items-center gap-1.5 text-[11px] text-[#8C857D] truncate">
-                                  <span className="shrink-0">{formatTimeOnly(tx.date)}</span>
+                                  <span className="shrink-0">{formatTimeOnly(tx)}</span>
                                   <span>•</span>
                                   <span className="font-semibold text-[#4A443F] truncate">
                                     {tx.walletName || 'Ví chính'}

@@ -59,7 +59,7 @@ import {
   DebtSummary,
   TransactionType,
 } from './types';
-import { formatVND, formatVNDShort } from './lib/formatters';
+import { formatVND, formatVNDShort, getTxDate, formatDate, formatTxDateTime } from './lib/formatters';
 
 // Modals & Views
 import { AddTransactionModal } from './components/AddTransactionModal';
@@ -341,7 +341,7 @@ export default function App() {
     .filter(
       (t) =>
         t?.type === 'EXPENSE' &&
-        new Date(t?.date || '').toDateString() === new Date().toDateString()
+        getTxDate(t).toDateString() === new Date().toDateString()
     )
     .reduce((sum, t) => sum + (t?.amount || 0), 0);
 
@@ -392,15 +392,17 @@ export default function App() {
   };
 
   // Filtered Transactions
-  const filteredTransactions = transactions.filter((t) => {
-    const matchesFilter = txFilter === 'ALL' || t.type === txFilter;
-    const matchesSearch =
-      !searchTerm ||
-      t.note.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (t.categoryName && t.categoryName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (t.walletName && t.walletName.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesFilter && matchesSearch;
-  });
+  const filteredTransactions = transactions
+    .filter((t) => {
+      const matchesFilter = txFilter === 'ALL' || t.type === txFilter;
+      const matchesSearch =
+        !searchTerm ||
+        (t.note || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (t.categoryName && t.categoryName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (t.walletName && t.walletName.toLowerCase().includes(searchTerm.toLowerCase()));
+      return matchesFilter && matchesSearch;
+    })
+    .sort((a, b) => getTxDate(b).getTime() - getTxDate(a).getTime());
 
   return (
     <div className="flex flex-col md:flex-row h-screen w-full bg-[#F9F8F3] font-sans text-[#2D2926] overflow-hidden relative">
@@ -864,13 +866,7 @@ export default function App() {
                             </span>
                             <span>•</span>
                             <span>
-                              {new Date(tx.date).toLocaleDateString('vi-VN', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                              {formatDate(tx)}
                             </span>
                           </div>
                         </div>

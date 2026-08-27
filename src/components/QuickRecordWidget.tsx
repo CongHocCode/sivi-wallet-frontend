@@ -79,6 +79,10 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
         ) || categories[0];
 
       if (matchedWallet) {
+        const parsedDate = parsed.date ? new Date(parsed.date) : new Date();
+        const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+        const transactionDate = safeDate.toISOString().slice(0, 19);
+
         await api.transactions.create({
           walletId: matchedWallet.id,
           walletName: matchedWallet.name,
@@ -88,7 +92,8 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
           amount: parsed.amount,
           type: parsed.type || 'EXPENSE',
           note: parsed.note,
-          date: parsed.date || new Date().toISOString(),
+          date: transactionDate,
+          transactionDate,
         });
         setNlpSuccessMsg(`Đã ghi nhận: ${parsed.note} (${formatVND(parsed.amount)})`);
         setNlpPrompt('');
@@ -112,6 +117,10 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
       const selectedWallet = wallets.find((w) => w.id === manualWalletId) || wallets[0];
       const selectedCategory = categories.find((c) => c.id === manualCatId) || categories[0];
 
+      const validManualDate = manualDate ? new Date(manualDate) : new Date();
+      const safeManualDate = isNaN(validManualDate.getTime()) ? new Date() : validManualDate;
+      const transactionDate = safeManualDate.toISOString().slice(0, 19);
+
       await api.transactions.create({
         walletId: selectedWallet.id,
         walletName: selectedWallet.name,
@@ -121,7 +130,8 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
         amount: parsedAmt,
         type: manualType,
         note: manualNote || (manualType === 'EXPENSE' ? 'Chi tiêu' : 'Thu nhập'),
-        date: new Date(manualDate).toISOString(),
+        date: transactionDate,
+        transactionDate,
       });
 
       setManualAmount('');
@@ -152,6 +162,7 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
       if (res) {
         const defaultWallet = wallets[0];
         const defaultCat = categories[0];
+        const transactionDate = new Date().toISOString().slice(0, 19);
 
         await api.transactions.create({
           walletId: defaultWallet?.id || '',
@@ -162,7 +173,8 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
           amount: res.totalAmount || 0,
           type: 'EXPENSE',
           note: `Quét hóa đơn ${res.merchantName || ''}`,
-          date: new Date().toISOString(),
+          date: transactionDate,
+          transactionDate,
         });
         setSelectedFile(null);
         setPreviewUrl(null);

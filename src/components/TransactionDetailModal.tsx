@@ -24,7 +24,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { Transaction, Wallet, Category } from '../types';
-import { formatVND } from '../lib/formatters';
+import { formatVND, getTxDate, formatTxDateTime } from '../lib/formatters';
 
 interface TransactionDetailModalProps {
   isOpen: boolean;
@@ -65,10 +65,9 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
     (transaction.note || '').toLowerCase().includes('[giọng nói]');
 
   // Format date & time nicely
-  const formatDate = (isoString: string) => {
+  const formatTransactionDate = (tx: Transaction) => {
     try {
-      const d = new Date(isoString);
-      if (isNaN(d.getTime())) return isoString;
+      const d = getTxDate(tx);
       return new Intl.DateTimeFormat('vi-VN', {
         weekday: 'long',
         year: 'numeric',
@@ -78,7 +77,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
         minute: '2-digit',
       }).format(d);
     } catch {
-      return isoString;
+      return formatTxDateTime(tx);
     }
   };
 
@@ -246,7 +245,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                 <CalendarDays className="w-4 h-4 text-[#8C857D]" /> Thời gian:
               </span>
               <span className="text-xs font-bold text-[#2D2926] text-right">
-                {formatDate(transaction.date)}
+                {formatTransactionDate(transaction)}
               </span>
             </div>
 

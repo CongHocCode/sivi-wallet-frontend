@@ -180,7 +180,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         }
 
         const selectedCategory = categories.find((c) => c.id === categoryId);
-        const transactionDate = new Date(date || Date.now()).toISOString().slice(0, 19);
+        const parsedDate = date ? new Date(date) : new Date();
+        const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+        const transactionDate = safeDate.toISOString().slice(0, 19);
 
         await api.transactions.create({
           walletId: fromWalletId,

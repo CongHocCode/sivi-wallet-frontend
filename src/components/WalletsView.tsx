@@ -30,7 +30,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { Wallet, Transaction, Category } from '../types';
-import { formatVND, formatVNDShort } from '../lib/formatters';
+import { formatVND, formatVNDShort, getTxDate, formatTxDateTime } from '../lib/formatters';
 import { api } from '../services/api';
 
 interface WalletsViewProps {
@@ -151,7 +151,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
 
         return true;
       })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => getTxDate(b).getTime() - getTxDate(a).getTime());
   }, [selectedWallet, transactions, statementFilter, statementSearch]);
 
   // Save wallet edits (Rename / Bank details)
@@ -709,13 +709,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                               <div className="flex items-center gap-2 text-[10px] text-[#8C857D] mt-0.5">
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-2.5 h-2.5" />
-                                  {new Date(tx.date).toLocaleDateString('vi-VN', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
+                                  {formatTxDateTime(tx)}
                                 </span>
 
                                 {tx.type === 'TRANSFER' && (

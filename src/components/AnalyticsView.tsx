@@ -35,7 +35,7 @@ import {
   Award,
 } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
-import { formatVND } from '../lib/formatters';
+import { formatVND, getTxDate } from '../lib/formatters';
 
 interface AnalyticsViewProps {
   transactions: Transaction[];
@@ -73,8 +73,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
     const currentYear = now.getFullYear();
 
     return transactions.filter((tx) => {
-      const txDate = new Date(tx.date);
-      if (isNaN(txDate.getTime())) return true;
+      const txDate = getTxDate(tx);
 
       if (timeRange === 'this_month') {
         return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
@@ -131,8 +130,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
     const monthMap: Record<string, { name: string; Thu: number; Chi: number }> = {};
 
     transactions.forEach((t) => {
-      const d = new Date(t.date);
-      if (isNaN(d.getTime())) return;
+      const d = getTxDate(t);
       const monthKey = `T${d.getMonth() + 1}/${d.getFullYear().toString().slice(2)}`;
 
       if (!monthMap[monthKey]) {
