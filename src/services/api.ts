@@ -23,6 +23,8 @@ import {
   CreateGroupDto,
   AddGroupMemberDto,
   CreateBillDto,
+  LoginDto,
+  RegisterDto,
 } from '../types';
 import {
   INITIAL_USER,
@@ -242,13 +244,32 @@ const authModule = {
     return authModule.getMe();
   },
 
-  login: async (emailOrUsername: string, name?: string, password?: string): Promise<User> => {
-    const email = emailOrUsername.includes('@') ? emailOrUsername : `${emailOrUsername}@sivi.vn`;
+  login: async (
+    dtoOrUsername: LoginDto | string,
+    nameParam?: string,
+    passwordParam?: string
+  ): Promise<User> => {
+    let usernameOrEmail: string;
+    let name: string | undefined;
+    let password: string | undefined;
+
+    if (typeof dtoOrUsername === 'object' && dtoOrUsername !== null) {
+      usernameOrEmail = String(dtoOrUsername.username || dtoOrUsername.email || 'user');
+      name = dtoOrUsername.username || dtoOrUsername.email;
+      password = dtoOrUsername.password;
+    } else {
+      usernameOrEmail = String(dtoOrUsername || '');
+      name = nameParam;
+      password = passwordParam;
+    }
+
+    const safeUsernameOrEmail = String(usernameOrEmail || '');
+    const email = safeUsernameOrEmail.includes('@') ? safeUsernameOrEmail : `${safeUsernameOrEmail || 'user'}@sivi.vn`;
     const user: User = {
       id: 'usr_' + Date.now(),
       email,
-      name: name || email.split('@')[0],
-      fullName: name || email.split('@')[0],
+      name: name || safeUsernameOrEmail.split('@')[0] || 'User',
+      fullName: name || safeUsernameOrEmail.split('@')[0] || 'User',
       isGuest: false,
       token: 'jwt_sivi_token_' + Date.now(),
       createdAt: new Date().toISOString(),
@@ -258,7 +279,12 @@ const authModule = {
       try {
         const res = await apiClient.request<User>('/auth/login', {
           method: 'POST',
-          body: JSON.stringify({ email: emailOrUsername, username: emailOrUsername, name, password }),
+          body: JSON.stringify({
+            username: safeUsernameOrEmail,
+            email,
+            name,
+            password,
+          }),
         });
         if (res.token) {
           apiClient.setToken(res.token);
@@ -273,13 +299,66 @@ const authModule = {
     return user;
   },
 
-  register: async (email: string, name: string, password?: string): Promise<User> => {
-    return authModule.login(email, name, password);
+  register: async (
+    dtoOrUsername: RegisterDto | string,
+    nameParam?: string,
+    passwordParam?: string
+  ): Promise<User> => {
+    let username: string;
+    let fullName: string;
+    let email: string;
+    let password: string | undefined;
+
+    if (typeof dtoOrUsername === 'object' && dtoOrUsername !== null) {
+      username = String(dtoOrUsername.username || '');
+      fullName = String(dtoOrUsername.fullName || dtoOrUsername.username || '');
+      email = String(dtoOrUsername.email || (username.includes('@') ? username : `${username || 'user'}@sivi.vn`));
+      password = dtoOrUsername.password;
+    } else {
+      username = String(dtoOrUsername || '');
+      fullName = String(nameParam || dtoOrUsername || '');
+      email = username.includes('@') ? username : `${username || 'user'}@sivi.vn`;
+      password = passwordParam;
+    }
+
+    const user: User = {
+      id: 'usr_' + Date.now(),
+      email,
+      name: fullName,
+      fullName,
+      isGuest: false,
+      token: 'jwt_sivi_token_' + Date.now(),
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!apiClient.getIsMockMode()) {
+      try {
+        const res = await apiClient.request<User>('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            username,
+            fullName,
+            email,
+            password,
+          }),
+        });
+        if (res.token) {
+          apiClient.setToken(res.token);
+        }
+        apiClient.setToStorage(STORAGE_KEYS.USER, res);
+        return res;
+      } catch {}
+    }
+
+    apiClient.setToken(user.token || null);
+    apiClient.setToStorage(STORAGE_KEYS.USER, user);
+    return user;
   },
 
   logout: () => {
     apiClient.setToken(null);
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.USER);
   },
 };
 

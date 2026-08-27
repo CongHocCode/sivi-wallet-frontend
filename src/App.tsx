@@ -40,6 +40,7 @@ import {
   Scale,
   ScanLine,
   AudioLines,
+  LogOut,
 } from 'lucide-react';
 
 import { api, apiService } from './services/api';
@@ -275,6 +276,12 @@ export default function App() {
     setUser(uData);
     setIsAuthModalOpen(false);
     loadAppData();
+  };
+
+  const handleLogout = () => {
+    api.auth.logout();
+    setUser(null);
+    setIsAuthModalOpen(true);
   };
 
   // Calculated Metrics
@@ -525,18 +532,45 @@ export default function App() {
         </nav>
 
         {/* User Account & Settings Footer */}
-        <div className="mt-auto p-4 bg-[#F1EFE7] rounded-2xl border border-[#EAE7DC] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#7D8F69]"></div>
-            <span className="text-xs font-bold text-[#4A443F]">Tài khoản Sivi Wallet</span>
+        <div className="mt-auto p-3.5 bg-[#F1EFE7] rounded-2xl border border-[#EAE7DC] space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-[#7D8F69] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                {(user?.fullName || user?.name || 'U').charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-[#4A443F] block truncate">
+                  {user?.fullName || user?.name || 'Tài khoản Sivi'}
+                </span>
+                <span className="text-[10px] text-[#8C857D] block truncate">
+                  {user?.email || 'Đã kết nối'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-1.5 text-[#8C857D] hover:text-[#2D2926] hover:bg-white rounded-lg transition shrink-0"
+              title="Cài đặt hệ thống"
+            >
+              <SettingsIcon className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-1.5 text-[#8C857D] hover:text-[#2D2926] hover:bg-white rounded-lg transition"
-            title="Cài đặt hệ thống"
-          >
-            <SettingsIcon className="w-4 h-4" />
-          </button>
+
+          <div className="flex items-center justify-between pt-2 border-t border-[#EAE7DC]/60">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+              <span className="text-[10px] font-semibold text-[#8C857D]">Online</span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="text-[11px] font-bold text-rose-700 hover:text-rose-800 flex items-center gap-1 px-2 py-1 hover:bg-white rounded-lg transition"
+              title="Đăng xuất khỏi thiết bị"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Đăng xuất</span>
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -1250,6 +1284,8 @@ export default function App() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onStatusChange={loadAppData}
+        user={user}
+        onLogout={handleLogout}
       />
 
       <TransactionDetailModal

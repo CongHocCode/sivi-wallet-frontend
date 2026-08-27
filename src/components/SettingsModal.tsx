@@ -19,19 +19,26 @@ import {
   Trash2,
   CheckCircle2,
   Sparkles,
+  LogOut,
+  User as UserIcon,
 } from 'lucide-react';
 import { api, apiService } from '../services/api';
+import { User } from '../types';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onStatusChange: () => void;
+  user?: User | null;
+  onLogout?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   onStatusChange,
+  user,
+  onLogout,
 }) => {
   const [isMockMode, setIsMockMode] = useState(api.getIsMockMode());
   const [isSyncing, setIsSyncing] = useState(false);
@@ -116,6 +123,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-5 overflow-y-auto flex-1">
+          {/* Current User Account Box */}
+          <div className="p-4 bg-[#F9F8F3] rounded-2xl border border-[#EAE7DC] flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#7D8F69] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                {(user?.fullName || user?.name || 'U').charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p className="text-xs font-bold text-[#2D2926]">{user?.fullName || user?.name || 'Tài khoản người dùng'}</p>
+                <p className="text-[11px] text-[#8C857D]">{user?.email || 'sivi@wallet.vn'}</p>
+              </div>
+            </div>
+
+            {onLogout && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onLogout();
+                }}
+                className="px-3 py-1.5 bg-white hover:bg-rose-50 border border-[#EAE7DC] hover:border-rose-200 text-rose-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                title="Đăng xuất khỏi tài khoản"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Đăng Xuất</span>
+              </button>
+            )}
+          </div>
+
           {/* Storage Mode Selector */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-[#4A443F] uppercase tracking-wider block">

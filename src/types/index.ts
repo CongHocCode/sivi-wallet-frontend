@@ -248,3 +248,16 @@ export interface SettleDebtDto {
   amount?: number;
   groupName?: string;
 }
+
+export interface LoginDto {
+  username?: string;
+  email?: string;
+  password?: string;
+}
+
+export interface RegisterDto {
+  username: string;
+  fullName?: string;
+  email?: string;
+  password?: string;
+}
