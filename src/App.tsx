@@ -247,13 +247,49 @@ export default function App() {
         api.bills.getDebts(),
       ]);
 
-      setUser(uData);
-      setWallets(wData);
-      setCategories(cData);
-      setTransactions(tData);
-      setGroups(gData);
-      setBills(bData);
-      setDebts(dData);
+      const walletList = Array.isArray(wData)
+        ? wData
+        : Array.isArray((wData as any)?.wallets)
+        ? (wData as any).wallets
+        : [];
+
+      const categoryList = Array.isArray(cData)
+        ? cData
+        : Array.isArray((cData as any)?.categories)
+        ? (cData as any).categories
+        : [];
+
+      const transactionList = Array.isArray(tData)
+        ? tData
+        : Array.isArray((tData as any)?.transactions)
+        ? (tData as any).transactions
+        : [];
+
+      const groupList = Array.isArray(gData)
+        ? gData
+        : Array.isArray((gData as any)?.groups)
+        ? (gData as any).groups
+        : [];
+
+      const billList = Array.isArray(bData)
+        ? bData
+        : Array.isArray((bData as any)?.bills)
+        ? (bData as any).bills
+        : [];
+
+      const debtList = Array.isArray(dData)
+        ? dData
+        : Array.isArray((dData as any)?.debts)
+        ? (dData as any).debts
+        : [];
+
+      setUser(uData || null);
+      setWallets(walletList);
+      setCategories(categoryList);
+      setTransactions(transactionList);
+      setGroups(groupList);
+      setBills(billList);
+      setDebts(debtList);
     } catch (err) {
       console.error('Error loading Sivi Wallet data:', err);
     } finally {
@@ -284,24 +320,30 @@ export default function App() {
     setIsAuthModalOpen(true);
   };
 
-  // Calculated Metrics
-  const totalBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
+  // Calculated Metrics (Defensive array checks)
+  const safeWallets = Array.isArray(wallets) ? wallets : [];
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+  const safeGroups = Array.isArray(groups) ? groups : [];
+  const safeBills = Array.isArray(bills) ? bills : [];
+  const safeDebts = Array.isArray(debts) ? debts : [];
 
-  const monthlyIncome = transactions
-    .filter((t) => t.type === 'INCOME')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const totalBalance = safeWallets.reduce((sum, w) => sum + (w?.balance || 0), 0);
 
-  const monthlyExpense = transactions
-    .filter((t) => t.type === 'EXPENSE')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const monthlyIncome = safeTransactions
+    .filter((t) => t?.type === 'INCOME')
+    .reduce((sum, t) => sum + (t?.amount || 0), 0);
 
-  const todayExpense = transactions
+  const monthlyExpense = safeTransactions
+    .filter((t) => t?.type === 'EXPENSE')
+    .reduce((sum, t) => sum + (t?.amount || 0), 0);
+
+  const todayExpense = safeTransactions
     .filter(
       (t) =>
-        t.type === 'EXPENSE' &&
-        new Date(t.date).toDateString() === new Date().toDateString()
+        t?.type === 'EXPENSE' &&
+        new Date(t?.date || '').toDateString() === new Date().toDateString()
     )
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + (t?.amount || 0), 0);
 
   // Handlers
   const handleDeleteTransaction = async (id: string) => {

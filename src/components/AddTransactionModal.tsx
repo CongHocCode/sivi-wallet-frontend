@@ -180,6 +180,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         }
 
         const selectedCategory = categories.find((c) => c.id === categoryId);
+        const transactionDate = new Date(date || Date.now()).toISOString().slice(0, 19);
 
         await api.transactions.create({
           walletId: fromWalletId,
@@ -190,7 +191,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           amount: parsedAmount,
           type,
           note: note || (type === 'EXPENSE' ? 'Chi tiêu cá nhân' : 'Thu nhập'),
-          date: new Date(date).toISOString(),
+          date: transactionDate,
+          transactionDate,
         });
       }
 
@@ -200,7 +202,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       setAmountInput('');
       setNote('');
     } catch (err: any) {
-      setError(err.message || 'Lỗi khi lưu giao dịch');
+      // Keep modal open on error – show API error message
+      const apiMsg = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi lưu giao dịch';
+      setError(apiMsg);
     } finally {
       setIsSubmitting(false);
     }

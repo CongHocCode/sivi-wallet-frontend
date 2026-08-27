@@ -9,6 +9,7 @@ export interface User {
   id: string | number;
   email: string;
   name: string;
+  username?: string;
   fullName?: string;
   avatarUrl?: string;
   isGuest?: boolean;
@@ -198,6 +199,8 @@ export interface CreateTransactionDto {
   type: TransactionType;
   note: string;
   date?: string;
+  transactionDate?: string;
+  sourceType?: string;
   destinationWalletId?: string;
   destinationWalletName?: string;
   groupId?: string;
