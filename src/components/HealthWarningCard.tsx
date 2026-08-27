@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Flame, ChevronRight } from 'lucide-react';
 import { Transaction } from '../types';
-import { apiService } from '../services/api';
+import { api, apiService } from '../services/api';
 
 interface HealthWarningCardProps {
   monthlyIncome: number;
@@ -32,7 +32,7 @@ export const HealthWarningCard: React.FC<HealthWarningCardProps> = ({
     const fetchSummary = async () => {
       setIsLoading(true);
       try {
-        const advice = await apiService.getFinancialCoachAdvice(
+        const advice = await api.coach.getAdvice(
           monthlyIncome,
           monthlyExpense,
           transactions

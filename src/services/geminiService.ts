@@ -115,4 +115,26 @@ Hãy đưa ra đúng 2 câu nhận xét cực mặn bằng tiếng Việt, vừa
 
     return response.text || "Tháng này chi tiêu cần tiết chế lại nhé!";
   },
+
+  async askFinancialCoach(
+    question: string,
+    summary: { totalIncome: number; totalExpense: number; topCategory: string }
+  ) {
+    const prompt = `Bạn là Cố Vấn Tài Chính SIVI AI (hài hước, thông minh và chu đáo).
+Bối cảnh người dùng:
+- Thu nhập tháng: ${summary.totalIncome.toLocaleString()} VND
+- Chi tiêu tháng: ${summary.totalExpense.toLocaleString()} VND
+- Hạng mục chi nhiều nhất: ${summary.topCategory}
+
+Câu hỏi của người dùng: "${question}"
+
+Hãy trả lời ngắn gọn (2-4 câu), hữu ích, dí dỏm bằng tiếng Việt.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash-lite",
+      contents: prompt,
+    });
+
+    return response.text || "Hãy cân đối thu chi hợp lý nhé!";
+  },
 };

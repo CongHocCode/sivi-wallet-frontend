@@ -22,7 +22,7 @@ import {
   Tag,
   AlertCircle,
 } from 'lucide-react';
-import { apiService } from '../services/api';
+import { api } from '../services/api';
 import { Wallet, Category, TransactionType } from '../types';
 import { formatVND, parseVNDInput } from '../lib/formatters';
 
@@ -168,12 +168,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           throw new Error(`Số dư ví "${selectedFromWallet.name}" (${formatVND(selectedFromWallet.balance)}) không đủ để chuyển ${formatVND(parsedAmount)}`);
         }
 
-        await apiService.transferWallet(
+        await api.wallets.transfer({
           fromWalletId,
           toWalletId,
-          parsedAmount,
-          note || `Chuyển tiền sang ví ${selectedToWallet?.name || ''}`
-        );
+          amount: parsedAmount,
+          note: note || `Chuyển tiền sang ví ${selectedToWallet?.name || ''}`,
+        });
       } else {
         if (!fromWalletId) {
           throw new Error('Vui lòng chọn ví thanh toán');
@@ -181,7 +181,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
         const selectedCategory = categories.find((c) => c.id === categoryId);
 
-        await apiService.addTransaction({
+        await api.transactions.create({
           walletId: fromWalletId,
           walletName: selectedFromWallet?.name,
           categoryId: selectedCategory?.id,

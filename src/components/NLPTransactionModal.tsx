@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff, Sparkles, Send, Check, X, AlertCircle } from 'lucide-react';
-import { apiService } from '../services/api';
+import { api } from '../services/api';
 import { geminiService } from '../services/geminiService';
 import { NLPParsedTransaction, Wallet, Category } from '../types';
 import { formatVND } from '../lib/formatters';
@@ -142,7 +142,7 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
         finalNote += ` (Chia với: ${parsedTx.splitWith.join(', ')})`;
       }
 
-      await apiService.addTransaction({
+      await api.transactions.create({
         walletId: selectedWalletId,
         walletName: wallet?.name,
         categoryId: cat.id,

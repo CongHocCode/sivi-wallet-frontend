@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Flame, RefreshCw, AlertTriangle, TrendingUp, Lightbulb } from 'lucide-react';
-import { apiService } from '../services/api';
+import { api, apiService } from '../services/api';
 import { geminiService } from '../services/geminiService';
 import { Transaction, FinancialCoachResponse } from '../types';
 import { formatVND } from '../lib/formatters';
@@ -47,7 +47,7 @@ export const FinancialCoachWidget: React.FC<FinancialCoachWidgetProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      const data = await apiService.getFinancialCoachAdvice(monthlyIncome, monthlyExpense, transactions);
+      const data = await api.coach.getAdvice(monthlyIncome, monthlyExpense, transactions);
       
       const topCategory = getTopCategory(transactions);
       try {

@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { X, Users, UserPlus, Trash2, UserCheck } from 'lucide-react';
-import { apiService } from '../services/api';
+import { api } from '../services/api';
 
 interface AddGroupModalProps {
   isOpen: boolean;
@@ -58,7 +58,11 @@ export const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, o
     setError(null);
 
     try {
-      await apiService.createGroup(name, description, members);
+      await api.groups.create({
+        name: name.trim(),
+        description: description ? description.trim() : undefined,
+        members,
+      });
       onSuccess();
       onClose();
     } catch (err: any) {

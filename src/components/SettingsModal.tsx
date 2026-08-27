@@ -20,7 +20,7 @@ import {
   CheckCircle2,
   Sparkles,
 } from 'lucide-react';
-import { apiService } from '../services/api';
+import { api, apiService } from '../services/api';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -33,20 +33,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   onStatusChange,
 }) => {
-  const [isMockMode, setIsMockMode] = useState(apiService.getIsMockMode());
+  const [isMockMode, setIsMockMode] = useState(api.getIsMockMode());
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('Vừa xong');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsMockMode(apiService.getIsMockMode());
+    setIsMockMode(api.getIsMockMode());
   }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleModeChange = (useLocal: boolean) => {
     setIsMockMode(useLocal);
-    apiService.setIsMockMode(useLocal);
+    api.setIsMockMode(useLocal);
     onStatusChange();
   };
 
@@ -64,9 +64,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleExportBackup = async () => {
     try {
       const [wallets, transactions, groups] = await Promise.all([
-        apiService.getWallets(),
-        apiService.getTransactions(),
-        apiService.getGroups(),
+        api.wallets.getAll(),
+        api.transactions.getAll(),
+        api.groups.getAll(),
       ]);
       const data = { wallets, transactions, groups, exportDate: new Date().toISOString() };
       const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));

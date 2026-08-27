@@ -1,6 +1,7 @@
 /**
- * SIVI WALLET - API Service Layer
- * Decoupled Spring Boot REST API integration with LocalStorage Fallback
+ * SIVI WALLET - Unified Backend API Service Layer
+ * Supports both modern modular namespaced API (api.wallets.getAll)
+ * and backward-compatible direct calls (apiService.getWallets)
  */
 
 import {
@@ -9,11 +10,19 @@ import {
   Category,
   Transaction,
   Group,
+  GroupMember,
   GroupBill,
   DebtSummary,
   ReceiptOCRResult,
   NLPParsedTransaction,
   FinancialCoachResponse,
+  GetTransactionsParams,
+  CreateWalletDto,
+  TransferWalletDto,
+  CreateTransactionDto,
+  CreateGroupDto,
+  AddGroupMemberDto,
+  CreateBillDto,
 } from '../types';
 import {
   INITIAL_USER,
@@ -24,6 +33,7 @@ import {
   INITIAL_TRANSACTIONS,
   calculateDebtMatrix,
 } from './mockData';
+import { geminiService } from './geminiService';
 
 // API Base URL config from env or default
 const metaEnv = (import.meta as any).env || {};
@@ -32,8 +42,9 @@ const API_BASE_URL =
   (metaEnv.NEXT_PUBLIC_API_URL as string) ||
   'http://localhost:8080/api';
 
-// Keys for LocalStorage fallback persistence
+// Keys for LocalStorage persistence
 const STORAGE_KEYS = {
+  TOKEN: 'sivi_token',
   USER: 'sivi_user',
   WALLETS: 'sivi_wallets',
   CATEGORIES: 'sivi_categories',
@@ -44,19 +55,23 @@ const STORAGE_KEYS = {
   CUSTOM_API_URL: 'sivi_custom_api_url',
 };
 
-class ApiService {
+class ApiClient {
   private token: string | null = null;
   private isMockMode: boolean = false;
   private customApiUrl: string = API_BASE_URL;
 
   constructor() {
-    // Check stored user token
-    const storedUser = this.getFromStorage<User>(STORAGE_KEYS.USER);
-    if (storedUser?.token) {
-      this.token = storedUser.token;
+    const storedToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    if (storedToken) {
+      this.token = storedToken;
+    } else {
+      const storedUser = this.getFromStorage<User>(STORAGE_KEYS.USER);
+      if (storedUser?.token) {
+        this.token = storedUser.token;
+        localStorage.setItem(STORAGE_KEYS.TOKEN, storedUser.token);
+      }
     }
 
-    // Check custom API URL or stored mode preference
     const savedUrl = localStorage.getItem(STORAGE_KEYS.CUSTOM_API_URL);
     if (savedUrl) {
       this.customApiUrl = savedUrl;
@@ -66,14 +81,12 @@ class ApiService {
     if (savedMode !== null) {
       this.isMockMode = savedMode === 'true';
     } else {
-      // Default to mock mode for smooth initial preview unless backend responds
       this.isMockMode = true;
     }
 
     this.initializeMockDataIfEmpty();
   }
 
-  // --- Configuration & Mode Handlers ---
   public getApiUrl(): string {
     return this.customApiUrl;
   }
@@ -92,6 +105,23 @@ class ApiService {
     localStorage.setItem(STORAGE_KEYS.USE_MOCK, String(val));
   }
 
+  public getToken(): string | null {
+    return this.token || localStorage.getItem(STORAGE_KEYS.TOKEN);
+  }
+
+  public setToken(token: string | null) {
+    this.token = token;
+    if (token) {
+      localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    }
+  }
+
+  public isAuthenticated(): boolean {
+    return !!(this.token || localStorage.getItem(STORAGE_KEYS.TOKEN));
+  }
+
   public async checkBackendHealth(): Promise<boolean> {
     try {
       const res = await fetch(`${this.customApiUrl}/health`, {
@@ -104,8 +134,7 @@ class ApiService {
     }
   }
 
-  // --- LocalStorage Helpers ---
-  private getFromStorage<T>(key: string): T | null {
+  public getFromStorage<T>(key: string): T | null {
     try {
       const item = localStorage.getItem(key);
       return item ? JSON.parse(item) : null;
@@ -114,7 +143,7 @@ class ApiService {
     }
   }
 
-  private setToStorage<T>(key: string, data: T): void {
+  public setToStorage<T>(key: string, data: T): void {
     try {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
@@ -122,7 +151,7 @@ class ApiService {
     }
   }
 
-  private initializeMockDataIfEmpty(): void {
+  public initializeMockDataIfEmpty(): void {
     if (!this.getFromStorage(STORAGE_KEYS.USER)) {
       this.setToStorage(STORAGE_KEYS.USER, INITIAL_USER);
     }
@@ -143,8 +172,7 @@ class ApiService {
     }
   }
 
-  // --- HTTP Request Client with Bearer Token ---
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  public async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     if (this.isMockMode) {
       throw new Error('MOCK_MODE_ACTIVE');
     }
@@ -154,8 +182,9 @@ class ApiService {
       ...(options.headers as Record<string, string>),
     };
 
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+    const token = this.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     const response = await fetch(`${this.customApiUrl}${endpoint}`, {
@@ -164,105 +193,154 @@ class ApiService {
     });
 
     if (!response.ok) {
-      const errData = await response.json().catch(() => ({ message: 'Lỗi từ máy chủ Spring Boot' }));
+      const errData = await response.json().catch(() => ({ message: 'Lỗi máy chủ' }));
       throw new Error(errData.message || `HTTP ${response.status}`);
     }
 
     return response.json();
   }
+}
 
-  // --- USER & AUTHENTICATION ---
-  public async getCurrentUser(): Promise<User> {
-    if (!this.isMockMode) {
-      try {
-        return await this.request<User>('/auth/me');
-      } catch {
-        // fallback
-      }
+export const apiClient = new ApiClient();
+
+// Helper to determine top spending category
+const getTopCategoryName = (txs: Transaction[]): string => {
+  const expenseTransactions = txs.filter((t) => t.type === 'EXPENSE');
+  if (expenseTransactions.length === 0) return 'Chi tiêu chung';
+  const categoryTotals: Record<string, number> = {};
+  expenseTransactions.forEach((t) => {
+    const catName = t.categoryName || 'Khác';
+    categoryTotals[catName] = (categoryTotals[catName] || 0) + t.amount;
+  });
+  let topCat = 'Chi tiêu chung';
+  let maxAmount = -1;
+  Object.entries(categoryTotals).forEach(([catName, total]) => {
+    if (total > maxAmount) {
+      maxAmount = total;
+      topCat = catName;
     }
-    return this.getFromStorage<User>(STORAGE_KEYS.USER) || INITIAL_USER;
-  }
+  });
+  return topCat;
+};
 
-  public async login(email: string, name?: string): Promise<User> {
+// --- AUTH SUB-MODULE ---
+const authModule = {
+  isAuthenticated: () => apiClient.isAuthenticated(),
+  getToken: () => apiClient.getToken(),
+  setToken: (token: string | null) => apiClient.setToken(token),
+
+  getMe: async (): Promise<User> => {
+    if (!apiClient.getIsMockMode()) {
+      try {
+        return await apiClient.request<User>('/auth/me');
+      } catch {}
+    }
+    return apiClient.getFromStorage<User>(STORAGE_KEYS.USER) || INITIAL_USER;
+  },
+
+  getCurrentUser: async (): Promise<User> => {
+    return authModule.getMe();
+  },
+
+  login: async (emailOrUsername: string, name?: string, password?: string): Promise<User> => {
+    const email = emailOrUsername.includes('@') ? emailOrUsername : `${emailOrUsername}@sivi.vn`;
     const user: User = {
       id: 'usr_' + Date.now(),
       email,
       name: name || email.split('@')[0],
+      fullName: name || email.split('@')[0],
       isGuest: false,
-      token: 'jwt_mock_token_' + Date.now(),
+      token: 'jwt_sivi_token_' + Date.now(),
       createdAt: new Date().toISOString(),
     };
 
-    if (!this.isMockMode) {
+    if (!apiClient.getIsMockMode()) {
       try {
-        const res = await this.request<User>('/auth/login', {
+        const res = await apiClient.request<User>('/auth/login', {
           method: 'POST',
-          body: JSON.stringify({ email, name }),
+          body: JSON.stringify({ email: emailOrUsername, username: emailOrUsername, name, password }),
         });
-        this.token = res.token || 'jwt_token';
+        if (res.token) {
+          apiClient.setToken(res.token);
+        }
+        apiClient.setToStorage(STORAGE_KEYS.USER, res);
         return res;
-      } catch {
-        // fallback to mock
-      }
+      } catch {}
     }
 
-    this.token = user.token || null;
-    this.setToStorage(STORAGE_KEYS.USER, user);
+    apiClient.setToken(user.token || null);
+    apiClient.setToStorage(STORAGE_KEYS.USER, user);
     return user;
-  }
+  },
 
-  // --- WALLET MANAGEMENT ---
-  public async getWallets(): Promise<Wallet[]> {
-    if (!this.isMockMode) {
+  register: async (email: string, name: string, password?: string): Promise<User> => {
+    return authModule.login(email, name, password);
+  },
+
+  logout: () => {
+    apiClient.setToken(null);
+    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+  },
+};
+
+// --- WALLETS SUB-MODULE ---
+const walletsModule = {
+  getAll: async (): Promise<Wallet[]> => {
+    if (!apiClient.getIsMockMode()) {
       try {
-        return await this.request<Wallet[]>('/wallets');
-      } catch {
-        // fallback
-      }
+        return await apiClient.request<Wallet[]>('/wallets');
+      } catch {}
     }
-    const wallets = this.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
-    return wallets.filter((w) => w.isActive);
-  }
+    const wallets = apiClient.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
+    return wallets.filter((w) => w.isActive !== false);
+  },
 
-  public async addWallet(walletData: Omit<Wallet, 'id' | 'userId' | 'currency' | 'isActive'>): Promise<Wallet> {
+  getById: async (id: string): Promise<Wallet | undefined> => {
+    const wallets = await walletsModule.getAll();
+    return wallets.find((w) => w.id === id);
+  },
+
+  create: async (walletData: CreateWalletDto): Promise<Wallet> => {
     const newWallet: Wallet = {
-      ...walletData,
       id: 'wal_' + Date.now(),
       userId: 'usr_001',
+      name: walletData.name,
+      type: walletData.type,
+      balance: walletData.balance || 0,
       currency: 'VND',
+      accountNumber: walletData.accountNumber,
+      bankName: walletData.bankName,
+      icon: walletData.icon || (walletData.type === 'BANK' ? 'Building2' : walletData.type === 'E_WALLET' ? 'Smartphone' : 'Banknote'),
+      color: walletData.color || (walletData.type === 'BANK' ? '#3B82F6' : walletData.type === 'E_WALLET' ? '#EC4899' : '#10B981'),
       isActive: true,
     };
 
-    if (!this.isMockMode) {
+    if (!apiClient.getIsMockMode()) {
       try {
-        return await this.request<Wallet>('/wallets', {
+        return await apiClient.request<Wallet>('/wallets', {
           method: 'POST',
           body: JSON.stringify(walletData),
         });
-      } catch {
-        // fallback
-      }
+      } catch {}
     }
 
-    const wallets = this.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
+    const wallets = apiClient.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
     const updated = [newWallet, ...wallets];
-    this.setToStorage(STORAGE_KEYS.WALLETS, updated);
+    apiClient.setToStorage(STORAGE_KEYS.WALLETS, updated);
     return newWallet;
-  }
+  },
 
-  public async updateWallet(id: string, walletData: Partial<Wallet>): Promise<Wallet> {
-    if (!this.isMockMode) {
+  update: async (id: string, walletData: Partial<Wallet>): Promise<Wallet> => {
+    if (!apiClient.getIsMockMode()) {
       try {
-        return await this.request<Wallet>(`/wallets/${id}`, {
+        return await apiClient.request<Wallet>(`/wallets/${id}`, {
           method: 'PUT',
           body: JSON.stringify(walletData),
         });
-      } catch {
-        // fallback
-      }
+      } catch {}
     }
 
-    const wallets = this.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
+    const wallets = apiClient.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
     let target: Wallet | null = null;
     const updated = wallets.map((w) => {
       if (w.id === id) {
@@ -271,54 +349,72 @@ class ApiService {
       }
       return w;
     });
-    this.setToStorage(STORAGE_KEYS.WALLETS, updated);
+    apiClient.setToStorage(STORAGE_KEYS.WALLETS, updated);
     return target || wallets[0];
-  }
+  },
 
-  public async deleteWallet(id: string): Promise<boolean> {
-    if (!this.isMockMode) {
+  delete: async (id: string): Promise<boolean> => {
+    if (!apiClient.getIsMockMode()) {
       try {
-        await this.request(`/wallets/${id}`, { method: 'DELETE' });
+        await apiClient.request(`/wallets/${id}`, { method: 'DELETE' });
         return true;
-      } catch {
-        // fallback
-      }
+      } catch {}
     }
 
-    const wallets = this.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
+    const wallets = apiClient.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
     const updated = wallets.map((w) => (w.id === id ? { ...w, isActive: false } : w));
-    this.setToStorage(STORAGE_KEYS.WALLETS, updated);
+    apiClient.setToStorage(STORAGE_KEYS.WALLETS, updated);
     return true;
-  }
+  },
 
-  public async transferWallet(fromWalletId: string, toWalletId: string, amount: number, note?: string): Promise<boolean> {
-    if (!this.isMockMode) {
+  transfer: async (
+    dtoOrFrom: TransferWalletDto | string,
+    toWalletIdParam?: string,
+    amountParam?: number,
+    noteParam?: string
+  ): Promise<boolean> => {
+    let fromWalletId: string;
+    let toWalletId: string;
+    let amount: number;
+    let note: string | undefined;
+
+    if (typeof dtoOrFrom === 'object') {
+      fromWalletId = String(dtoOrFrom.fromWalletId);
+      toWalletId = String(dtoOrFrom.toWalletId);
+      amount = dtoOrFrom.amount;
+      note = dtoOrFrom.note;
+    } else {
+      fromWalletId = String(dtoOrFrom);
+      toWalletId = String(toWalletIdParam!);
+      amount = amountParam!;
+      note = noteParam;
+    }
+
+    if (!apiClient.getIsMockMode()) {
       try {
-        await this.request('/wallets/transfer', {
+        await apiClient.request('/wallets/transfer', {
           method: 'POST',
           body: JSON.stringify({ fromWalletId, toWalletId, amount, note }),
         });
         return true;
-      } catch {
-        // fallback
-      }
+      } catch {}
     }
 
-    const wallets = this.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
+    const wallets = apiClient.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
     const fromWal = wallets.find((w) => w.id === fromWalletId);
     const toWal = wallets.find((w) => w.id === toWalletId);
 
     if (!fromWal || !toWal) throw new Error('Ví không tồn tại');
-    if (fromWal.balance < amount) throw new Error('Số dư ví gửi không đủ');
+    if (fromWal.balance < amount) throw new Error('Số dư ví gửi không đủ để thực hiện chuyển khoản');
 
     fromWal.balance -= amount;
     toWal.balance += amount;
 
-    this.setToStorage(STORAGE_KEYS.WALLETS, wallets);
+    apiClient.setToStorage(STORAGE_KEYS.WALLETS, wallets);
 
-    // Record internal transfer transaction
-    await this.addTransaction({
+    await transactionsModule.create({
       walletId: fromWalletId,
+      walletName: fromWal.name,
       amount,
       type: 'TRANSFER',
       note: note || `Chuyển tiền sang ví ${toWal.name}`,
@@ -330,78 +426,114 @@ class ApiService {
     });
 
     return true;
-  }
+  },
+};
 
-  // --- CATEGORIES ---
-  public async getCategories(): Promise<Category[]> {
-    if (!this.isMockMode) {
+// --- CATEGORIES SUB-MODULE ---
+const categoriesModule = {
+  getAll: async (): Promise<Category[]> => {
+    if (!apiClient.getIsMockMode()) {
       try {
-        return await this.request<Category[]>('/categories');
-      } catch {
-        // fallback
-      }
+        return await apiClient.request<Category[]>('/categories');
+      } catch {}
     }
-    return this.getFromStorage<Category[]>(STORAGE_KEYS.CATEGORIES) || INITIAL_CATEGORIES;
-  }
+    return apiClient.getFromStorage<Category[]>(STORAGE_KEYS.CATEGORIES) || INITIAL_CATEGORIES;
+  },
 
-  public async addCategory(cat: Omit<Category, 'id' | 'isDefault'>): Promise<Category> {
+  create: async (cat: Omit<Category, 'id' | 'isDefault'>): Promise<Category> => {
     const newCat: Category = {
       ...cat,
       id: 'cat_' + Date.now(),
       isDefault: false,
     };
 
-    if (!this.isMockMode) {
+    if (!apiClient.getIsMockMode()) {
       try {
-        return await this.request<Category>('/categories', {
+        return await apiClient.request<Category>('/categories', {
           method: 'POST',
           body: JSON.stringify(cat),
         });
-      } catch {
-        // fallback
-      }
+      } catch {}
     }
 
-    const categories = this.getFromStorage<Category[]>(STORAGE_KEYS.CATEGORIES) || INITIAL_CATEGORIES;
-    this.setToStorage(STORAGE_KEYS.CATEGORIES, [...categories, newCat]);
+    const categories = apiClient.getFromStorage<Category[]>(STORAGE_KEYS.CATEGORIES) || INITIAL_CATEGORIES;
+    apiClient.setToStorage(STORAGE_KEYS.CATEGORIES, [...categories, newCat]);
     return newCat;
-  }
+  },
+};
 
-  // --- TRANSACTIONS ---
-  public async getTransactions(): Promise<Transaction[]> {
-    if (!this.isMockMode) {
-      try {
-        return await this.request<Transaction[]>('/transactions');
-      } catch {
-        // fallback
-      }
+// --- TRANSACTIONS SUB-MODULE ---
+const transactionsModule = {
+  getAll: async (params?: GetTransactionsParams): Promise<Transaction[]> => {
+    let endpoint = '/transactions';
+    if (params) {
+      const query = new URLSearchParams();
+      if (params.month && params.month !== 'ALL') query.append('month', String(params.month));
+      if (params.year && params.year !== 'ALL') query.append('year', String(params.year));
+      if (params.walletId && params.walletId !== 'ALL') query.append('walletId', String(params.walletId));
+      if (params.type && params.type !== 'ALL') query.append('type', params.type);
+      const qs = query.toString();
+      if (qs) endpoint += `?${qs}`;
     }
-    return this.getFromStorage<Transaction[]>(STORAGE_KEYS.TRANSACTIONS) || INITIAL_TRANSACTIONS;
-  }
 
-  public async addTransaction(
-    txData: Omit<Transaction, 'id' | 'userId' | 'createdAt'>
-  ): Promise<Transaction> {
+    if (!apiClient.getIsMockMode()) {
+      try {
+        return await apiClient.request<Transaction[]>(endpoint);
+      } catch {}
+    }
+
+    let transactions = apiClient.getFromStorage<Transaction[]>(STORAGE_KEYS.TRANSACTIONS) || INITIAL_TRANSACTIONS;
+
+    if (params) {
+      transactions = transactions.filter((t) => {
+        if (params.type && params.type !== 'ALL' && t.type !== params.type) return false;
+        if (
+          params.walletId &&
+          params.walletId !== 'ALL' &&
+          t.walletId !== String(params.walletId) &&
+          t.destinationWalletId !== String(params.walletId)
+        ) {
+          return false;
+        }
+        if (params.year && params.year !== 'ALL') {
+          const y = new Date(t.date).getFullYear();
+          if (y !== params.year) return false;
+        }
+        if (params.month && params.month !== 'ALL') {
+          const m = new Date(t.date).getMonth() + 1;
+          if (m !== params.month) return false;
+        }
+        return true;
+      });
+    }
+
+    return transactions;
+  },
+
+  getById: async (id: string): Promise<Transaction | undefined> => {
+    const transactions = await transactionsModule.getAll();
+    return transactions.find((t) => t.id === id);
+  },
+
+  create: async (txData: CreateTransactionDto): Promise<Transaction> => {
     const newTx: Transaction = {
       ...txData,
       id: 'tx_' + Date.now(),
       userId: 'usr_001',
+      date: txData.date || new Date().toISOString(),
       createdAt: new Date().toISOString(),
     };
 
-    if (!this.isMockMode) {
+    if (!apiClient.getIsMockMode()) {
       try {
-        return await this.request<Transaction>('/transactions', {
+        return await apiClient.request<Transaction>('/transactions', {
           method: 'POST',
           body: JSON.stringify(txData),
         });
-      } catch {
-        // fallback
-      }
+      } catch {}
     }
 
-    // Update wallet balance automatically
-    const wallets = this.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
+    const wallets = apiClient.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
     const targetWallet = wallets.find((w) => w.id === txData.walletId);
     if (targetWallet) {
       if (txData.type === 'EXPENSE') {
@@ -409,31 +541,51 @@ class ApiService {
       } else if (txData.type === 'INCOME' || txData.type === 'SETTLEMENT') {
         targetWallet.balance += txData.amount;
       }
-      this.setToStorage(STORAGE_KEYS.WALLETS, wallets);
+      apiClient.setToStorage(STORAGE_KEYS.WALLETS, wallets);
     }
 
-    const transactions = this.getFromStorage<Transaction[]>(STORAGE_KEYS.TRANSACTIONS) || INITIAL_TRANSACTIONS;
+    const transactions = apiClient.getFromStorage<Transaction[]>(STORAGE_KEYS.TRANSACTIONS) || INITIAL_TRANSACTIONS;
     const updated = [newTx, ...transactions];
-    this.setToStorage(STORAGE_KEYS.TRANSACTIONS, updated);
+    apiClient.setToStorage(STORAGE_KEYS.TRANSACTIONS, updated);
     return newTx;
-  }
+  },
 
-  public async deleteTransaction(id: string): Promise<boolean> {
-    if (!this.isMockMode) {
+  update: async (id: string, txData: Partial<Transaction>): Promise<Transaction> => {
+    if (!apiClient.getIsMockMode()) {
       try {
-        await this.request(`/transactions/${id}`, { method: 'DELETE' });
-        return true;
-      } catch {
-        // fallback
-      }
+        return await apiClient.request<Transaction>(`/transactions/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(txData),
+        });
+      } catch {}
     }
 
-    const transactions = this.getFromStorage<Transaction[]>(STORAGE_KEYS.TRANSACTIONS) || INITIAL_TRANSACTIONS;
+    const transactions = apiClient.getFromStorage<Transaction[]>(STORAGE_KEYS.TRANSACTIONS) || INITIAL_TRANSACTIONS;
+    let target: Transaction | null = null;
+    const updated = transactions.map((t) => {
+      if (t.id === id) {
+        target = { ...t, ...txData };
+        return target;
+      }
+      return t;
+    });
+    apiClient.setToStorage(STORAGE_KEYS.TRANSACTIONS, updated);
+    return target || transactions[0];
+  },
+
+  delete: async (id: string): Promise<boolean> => {
+    if (!apiClient.getIsMockMode()) {
+      try {
+        await apiClient.request(`/transactions/${id}`, { method: 'DELETE' });
+        return true;
+      } catch {}
+    }
+
+    const transactions = apiClient.getFromStorage<Transaction[]>(STORAGE_KEYS.TRANSACTIONS) || INITIAL_TRANSACTIONS;
     const tx = transactions.find((t) => t.id === id);
 
     if (tx) {
-      // Revert wallet balance
-      const wallets = this.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
+      const wallets = apiClient.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
       const targetWallet = wallets.find((w) => w.id === tx.walletId);
       if (targetWallet) {
         if (tx.type === 'EXPENSE') {
@@ -441,110 +593,198 @@ class ApiService {
         } else if (tx.type === 'INCOME' || tx.type === 'SETTLEMENT') {
           targetWallet.balance -= tx.amount;
         }
-        this.setToStorage(STORAGE_KEYS.WALLETS, wallets);
+        apiClient.setToStorage(STORAGE_KEYS.WALLETS, wallets);
       }
     }
 
     const updated = transactions.filter((t) => t.id !== id);
-    this.setToStorage(STORAGE_KEYS.TRANSACTIONS, updated);
+    apiClient.setToStorage(STORAGE_KEYS.TRANSACTIONS, updated);
     return true;
-  }
+  },
+};
 
-  // --- GROUPS & SPLIT BILL ENGINE ---
-  public async getGroups(): Promise<Group[]> {
-    if (!this.isMockMode) {
+// --- GROUPS SUB-MODULE ---
+const groupsModule = {
+  getAll: async (): Promise<Group[]> => {
+    if (!apiClient.getIsMockMode()) {
       try {
-        return await this.request<Group[]>('/groups');
-      } catch {
-        // fallback
-      }
+        return await apiClient.request<Group[]>('/groups');
+      } catch {}
     }
-    return this.getFromStorage<Group[]>(STORAGE_KEYS.GROUPS) || INITIAL_GROUPS;
-  }
+    return apiClient.getFromStorage<Group[]>(STORAGE_KEYS.GROUPS) || INITIAL_GROUPS;
+  },
 
-  public async createGroup(name: string, description?: string, members?: { name: string; isGuest: boolean; email?: string }[]): Promise<Group> {
-    const memberList: import('../types').GroupMember[] = members
-      ? members.map((m, idx) => ({ id: `m_${Date.now()}_${idx}`, name: m.name, isGuest: m.isGuest, email: m.email, userId: m.isGuest ? undefined : 'usr_' + idx }))
-      : [{ id: 'usr_001', name: 'Trần Minh Nam (Tôi)', isGuest: false, userId: 'usr_001' }];
+  getMyGroups: async (): Promise<Group[]> => {
+    return groupsModule.getAll();
+  },
 
-    // Ensure creator is in members
+  getById: async (id: string): Promise<Group | undefined> => {
+    const groups = await groupsModule.getAll();
+    return groups.find((g) => g.id === id);
+  },
+
+  create: async (
+    groupDataOrName: CreateGroupDto | string,
+    description?: string,
+    members?: { name: string; isGuest: boolean; email?: string }[]
+  ): Promise<Group> => {
+    let name: string;
+    let desc: string | undefined;
+    let memberInputs: { name: string; isGuest: boolean; email?: string }[] | undefined;
+
+    if (typeof groupDataOrName === 'object') {
+      name = groupDataOrName.name;
+      desc = groupDataOrName.description;
+      memberInputs = groupDataOrName.members;
+    } else {
+      name = groupDataOrName;
+      desc = description;
+      memberInputs = members;
+    }
+
+    const memberList: GroupMember[] = memberInputs
+      ? memberInputs.map((m, idx) => ({
+          id: `m_${Date.now()}_${idx}`,
+          name: m.name,
+          fullName: m.name,
+          isGuest: m.isGuest,
+          email: m.email,
+          userId: m.isGuest ? undefined : 'usr_' + idx,
+        }))
+      : [{ id: 'usr_001', name: 'Trần Minh Nam (Tôi)', fullName: 'Trần Minh Nam', isGuest: false, userId: 'usr_001' }];
+
     if (!memberList.some((m) => m.id === 'usr_001' || m.userId === 'usr_001')) {
-      memberList.unshift({ id: 'usr_001', name: 'Trần Minh Nam (Tôi)', isGuest: false, userId: 'usr_001' });
+      memberList.unshift({
+        id: 'usr_001',
+        name: 'Trần Minh Nam (Tôi)',
+        fullName: 'Trần Minh Nam',
+        isGuest: false,
+        userId: 'usr_001',
+      });
     }
 
     const newGroup: Group = {
       id: 'grp_' + Date.now(),
       name,
-      description,
+      description: desc,
       members: memberList,
       createdAt: new Date().toISOString(),
     };
 
-    if (!this.isMockMode) {
+    if (!apiClient.getIsMockMode()) {
       try {
-        return await this.request<Group>('/groups', {
+        return await apiClient.request<Group>('/groups', {
           method: 'POST',
-          body: JSON.stringify({ name, description, members }),
+          body: JSON.stringify({ name, description: desc, members: memberInputs }),
         });
-      } catch {
-        // fallback
-      }
+      } catch {}
     }
 
-    const groups = this.getFromStorage<Group[]>(STORAGE_KEYS.GROUPS) || INITIAL_GROUPS;
-    this.setToStorage(STORAGE_KEYS.GROUPS, [...groups, newGroup]);
+    const groups = apiClient.getFromStorage<Group[]>(STORAGE_KEYS.GROUPS) || INITIAL_GROUPS;
+    apiClient.setToStorage(STORAGE_KEYS.GROUPS, [...groups, newGroup]);
     return newGroup;
-  }
+  },
 
-  public async getGroupBills(groupId?: string): Promise<GroupBill[]> {
-    if (!this.isMockMode) {
+  addMember: async (groupId: string | number, memberData: AddGroupMemberDto): Promise<Group> => {
+    const targetGroupId = String(groupId);
+    const newMember: GroupMember = {
+      id: `m_${Date.now()}`,
+      name: memberData.name || memberData.fullName || 'Thành viên',
+      fullName: memberData.fullName || memberData.name,
+      isGuest: memberData.isGuest !== false,
+      email: memberData.email,
+      userId: memberData.userId ? String(memberData.userId) : undefined,
+    };
+
+    if (!apiClient.getIsMockMode()) {
       try {
-        return await this.request<GroupBill[]>(groupId ? `/groups/${groupId}/bills` : '/bills');
-      } catch {
-        // fallback
-      }
+        return await apiClient.request<Group>(`/groups/${targetGroupId}/members`, {
+          method: 'POST',
+          body: JSON.stringify(memberData),
+        });
+      } catch {}
     }
 
-    const bills = this.getFromStorage<GroupBill[]>(STORAGE_KEYS.BILLS) || INITIAL_BILLS;
+    const groups = apiClient.getFromStorage<Group[]>(STORAGE_KEYS.GROUPS) || INITIAL_GROUPS;
+    let updatedGroup: Group | null = null;
+    const updated = groups.map((g) => {
+      if (g.id === targetGroupId) {
+        updatedGroup = { ...g, members: [...g.members, newMember] };
+        return updatedGroup;
+      }
+      return g;
+    });
+    apiClient.setToStorage(STORAGE_KEYS.GROUPS, updated);
+    return updatedGroup || groups[0];
+  },
+
+  delete: async (id: string): Promise<boolean> => {
+    if (!apiClient.getIsMockMode()) {
+      try {
+        await apiClient.request(`/groups/${id}`, { method: 'DELETE' });
+        return true;
+      } catch {}
+    }
+    const groups = apiClient.getFromStorage<Group[]>(STORAGE_KEYS.GROUPS) || INITIAL_GROUPS;
+    apiClient.setToStorage(STORAGE_KEYS.GROUPS, groups.filter((g) => g.id !== id));
+    return true;
+  },
+};
+
+// --- BILLS & DEBTS SUB-MODULE ---
+const billsModule = {
+  getAll: async (groupId?: string): Promise<GroupBill[]> => {
+    if (!apiClient.getIsMockMode()) {
+      try {
+        return await apiClient.request<GroupBill[]>(groupId ? `/groups/${groupId}/bills` : '/bills');
+      } catch {}
+    }
+
+    const bills = apiClient.getFromStorage<GroupBill[]>(STORAGE_KEYS.BILLS) || INITIAL_BILLS;
     if (groupId) {
       return bills.filter((b) => b.groupId === groupId);
     }
     return bills;
-  }
+  },
 
-  public async addGroupBill(billData: Omit<GroupBill, 'id'>): Promise<GroupBill> {
+  create: async (billData: CreateBillDto | Omit<GroupBill, 'id'>): Promise<GroupBill> => {
+    const payerId = String(billData.payerMemberId || (billData as any).payerId || 'usr_001');
+    const payerName = billData.payerMemberName || (billData as any).payerName || 'Thành viên';
+
     const newBill: GroupBill = {
       ...billData,
       id: 'bill_' + Date.now(),
+      payerMemberId: payerId,
+      payerId: payerId,
+      payerMemberName: payerName,
+      payerName: payerName,
+      date: billData.date || new Date().toISOString(),
     };
 
-    if (!this.isMockMode) {
+    if (!apiClient.getIsMockMode()) {
       try {
-        return await this.request<GroupBill>(`/groups/${billData.groupId}/bills`, {
+        return await apiClient.request<GroupBill>(`/groups/${billData.groupId}/bills`, {
           method: 'POST',
           body: JSON.stringify(billData),
         });
-      } catch {
-        // fallback
-      }
+      } catch {}
     }
 
-    const bills = this.getFromStorage<GroupBill[]>(STORAGE_KEYS.BILLS) || INITIAL_BILLS;
-    this.setToStorage(STORAGE_KEYS.BILLS, [newBill, ...bills]);
+    const bills = apiClient.getFromStorage<GroupBill[]>(STORAGE_KEYS.BILLS) || INITIAL_BILLS;
+    apiClient.setToStorage(STORAGE_KEYS.BILLS, [newBill, ...bills]);
 
-    // If I paid for this bill, record my personal expense share
-    const mySplit = billData.splits.find((s) => s.memberId === 'usr_001');
-    if (mySplit && mySplit.amount > 0 && billData.payerMemberId === 'usr_001') {
-      const wallets = await this.getWallets();
+    const mySplit = billData.splits.find((s) => s.memberId === 'usr_001' || s.memberId === payerId);
+    if (mySplit && mySplit.amount > 0 && (payerId === 'usr_001' || payerId.includes('usr_001'))) {
+      const wallets = await walletsModule.getAll();
       const defaultWal = wallets[0];
       if (defaultWal) {
-        await this.addTransaction({
+        await transactionsModule.create({
           walletId: defaultWal.id,
           walletName: defaultWal.name,
           amount: mySplit.amount,
           type: 'EXPENSE',
-          note: `Phần của tôi: ${billData.title} (${billData.groupName})`,
-          date: billData.date,
+          note: `Phần chi của tôi: ${billData.title} (${billData.groupName || 'Nhóm'})`,
+          date: billData.date || new Date().toISOString(),
           groupId: billData.groupId,
           groupName: billData.groupName,
           categoryName: billData.category || 'Ăn uống',
@@ -554,54 +794,171 @@ class ApiService {
     }
 
     return newBill;
-  }
+  },
 
-  public async getDebtLedger(): Promise<DebtSummary[]> {
-    const bills = await this.getGroupBills();
+  getDebts: async (): Promise<DebtSummary[]> => {
+    const bills = await billsModule.getAll();
     return calculateDebtMatrix(bills);
-  }
+  },
 
-  // --- 1-CLICK SETTLEMENT ENGINE ---
-  public async settleDebt(
-    debtorName: string,
-    creditorName: string,
-    amount: number,
-    targetWalletId: string,
-    groupName: string
-  ): Promise<boolean> {
-    if (!this.isMockMode) {
-      try {
-        await this.request('/groups/settlement', {
-          method: 'POST',
-          body: JSON.stringify({ debtorName, creditorName, amount, targetWalletId, groupName }),
-        });
-        return true;
-      } catch {
-        // fallback
-      }
+  getDebtLedger: async (): Promise<DebtSummary[]> => {
+    return billsModule.getDebts();
+  },
+
+  settleDebt: async (
+    billDetailIdOrDebtor: string | number,
+    targetWalletIdOrCreditor: string | number,
+    amountParam?: number,
+    targetWalletIdParam?: string | number,
+    groupNameParam?: string
+  ): Promise<boolean> => {
+    let debtorName: string;
+    let creditorName: string;
+    let amount: number;
+    let targetWalletId: string;
+    let groupName: string;
+    let billDetailId: string | undefined;
+
+    if (amountParam !== undefined && targetWalletIdParam !== undefined) {
+      debtorName = String(billDetailIdOrDebtor);
+      creditorName = String(targetWalletIdOrCreditor);
+      amount = amountParam;
+      targetWalletId = String(targetWalletIdParam);
+      groupName = groupNameParam || 'Nhóm';
+    } else {
+      billDetailId = String(billDetailIdOrDebtor);
+      targetWalletId = String(targetWalletIdOrCreditor);
+      const debts = await billsModule.getDebts();
+      const found = debts.find((d) => d.billDetailId === billDetailId || d.debtorId === billDetailId) || debts[0];
+      debtorName = found?.debtorName || 'Bạn bè';
+      creditorName = found?.creditorName || 'Tôi';
+      amount = found?.amount || 0;
+      groupName = found?.groupName || 'Nhóm';
     }
 
-    const wallets = await this.getWallets();
+    if (!apiClient.getIsMockMode()) {
+      try {
+        await apiClient.request('/groups/settlement', {
+          method: 'POST',
+          body: JSON.stringify({ billDetailId, debtorName, creditorName, amount, targetWalletId, groupName }),
+        });
+        return true;
+      } catch {}
+    }
+
+    const wallets = await walletsModule.getAll();
     const targetWallet = wallets.find((w) => w.id === targetWalletId) || wallets[0];
 
-    // Trigger settlement income transaction into selected wallet
-    await this.addTransaction({
-      walletId: targetWallet.id,
-      walletName: targetWallet.name,
-      amount,
-      type: 'SETTLEMENT',
-      note: `Thanh toán nợ: ${debtorName} trả cho ${creditorName} (${groupName})`,
-      settlementDebtorName: debtorName,
-      date: new Date().toISOString(),
-      categoryName: 'Thanh toán nợ nhóm',
-      categoryIcon: 'CheckCircle2',
-    });
+    if (targetWallet && amount > 0) {
+      await transactionsModule.create({
+        walletId: targetWallet.id,
+        walletName: targetWallet.name,
+        amount,
+        type: 'SETTLEMENT',
+        note: `Tất toán nợ: ${debtorName} trả cho ${creditorName} (${groupName})`,
+        settlementDebtorName: debtorName,
+        date: new Date().toISOString(),
+        categoryName: 'Tất toán nợ nhóm',
+        categoryIcon: 'CheckCircle2',
+      });
+    }
 
     return true;
-  }
+  },
+};
 
-  // --- GOOGLE GEMINI AI INTEGRATIONS ---
-  public async scanReceiptOCR(base64Image: string): Promise<ReceiptOCRResult> {
+// --- COACH & AI SUB-MODULE ---
+const coachModule = {
+  getAdvice: async (
+    monthlyIncome: number,
+    monthlyExpense: number,
+    topCategoryOrTransactions: string | Transaction[]
+  ): Promise<FinancialCoachResponse> => {
+    let topCategory = 'Chi tiêu chung';
+    let transactionsList: Transaction[] = [];
+
+    if (Array.isArray(topCategoryOrTransactions)) {
+      transactionsList = topCategoryOrTransactions;
+      topCategory = getTopCategoryName(transactionsList);
+    } else if (typeof topCategoryOrTransactions === 'string') {
+      topCategory = topCategoryOrTransactions;
+    }
+
+    let roastSummary = '';
+    try {
+      roastSummary = await geminiService.generateRoast({
+        totalIncome: monthlyIncome,
+        totalExpense: monthlyExpense,
+        topCategory,
+      });
+    } catch {
+      roastSummary =
+        'Tháng này chi tiêu có vẻ khá phung phí đấy nhé! Đừng để tiền đi nhanh như người yêu cũ. Hãy trích lập tiết kiệm tối thiểu 20% trước khi sắm sửa nhé.';
+    }
+
+    const netSavings = monthlyIncome - monthlyExpense;
+    const savingsRate = monthlyIncome > 0 ? netSavings / monthlyIncome : 0;
+    const score = Math.max(20, Math.min(98, Math.round(savingsRate * 100)));
+    const mood: 'ROAST' | 'PRAISE' | 'WARNING' = score < 50 ? 'ROAST' : score < 75 ? 'WARNING' : 'PRAISE';
+
+    return {
+      title: 'Cố Vấn Tài Chính SIVI AI',
+      roastSummary,
+      score,
+      mood,
+      actionableTips: [
+        `Cân nhắc tiết chế bớt chi tiêu cho "${topCategory}"`,
+        'Duy trì tỷ lệ tích lũy tài sản tối thiểu 20% mỗi tháng',
+        'Thiết lập hạn mức cảnh báo chi tiêu tự động trên ví',
+      ],
+      categoryAlerts: [
+        {
+          category: topCategory,
+          text: `Danh mục "${topCategory}" đang chiếm tỷ trọng chi tiêu lớn nhất`,
+        },
+      ],
+    };
+  },
+
+  getFinancialCoachAdvice: async (
+    monthlyIncome: number,
+    monthlyExpense: number,
+    transactions: Transaction[]
+  ): Promise<FinancialCoachResponse> => {
+    return coachModule.getAdvice(monthlyIncome, monthlyExpense, transactions);
+  },
+
+  askQuestion: async (
+    question: string,
+    monthlyIncome: number,
+    monthlyExpense: number,
+    transactions: Transaction[]
+  ): Promise<{ answer: string }> => {
+    const topCategory = getTopCategoryName(transactions);
+    try {
+      const answer = await geminiService.askFinancialCoach(question, {
+        totalIncome: monthlyIncome,
+        totalExpense: monthlyExpense,
+        topCategory,
+      });
+      return { answer };
+    } catch {
+      return {
+        answer: `Cảm ơn bạn đã hỏi "${question}". Về mặt tài chính, thu nhập hiện tại của bạn là ${monthlyIncome.toLocaleString('vi-VN')} đ và chi tiêu ${monthlyExpense.toLocaleString('vi-VN')} đ. Lời khuyên của Sivi là luôn ưu tiên trích lập tiết kiệm 20% và cân đối khoản chi cho ${topCategory}.`,
+      };
+    }
+  },
+
+  askFinancialCoachQuestion: async (
+    question: string,
+    monthlyIncome: number,
+    monthlyExpense: number,
+    transactions: Transaction[]
+  ): Promise<{ answer: string }> => {
+    return coachModule.askQuestion(question, monthlyIncome, monthlyExpense, transactions);
+  },
+
+  scanReceiptOCR: async (base64Image: string): Promise<ReceiptOCRResult> => {
     const response = await fetch('/api/gemini/receipt-ocr', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -614,9 +971,9 @@ class ApiService {
     }
 
     return response.json();
-  }
+  },
 
-  public async parseNaturalLanguageTransaction(vietnamesePrompt: string): Promise<NLPParsedTransaction> {
+  parseNLP: async (vietnamesePrompt: string): Promise<NLPParsedTransaction> => {
     const response = await fetch('/api/gemini/nlp-transaction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -629,46 +986,67 @@ class ApiService {
     }
 
     return response.json();
-  }
+  },
 
-  public async getFinancialCoachAdvice(
-    monthlyIncome: number,
-    monthlyExpense: number,
-    transactions: Transaction[]
-  ): Promise<FinancialCoachResponse> {
-    const response = await fetch('/api/gemini/financial-coach', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ monthlyIncome, monthlyExpense, transactions }),
-    });
+  parseNaturalLanguage: async (vietnamesePrompt: string): Promise<NLPParsedTransaction> => {
+    return coachModule.parseNLP(vietnamesePrompt);
+  },
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini Financial Coach Error: ${errorText}`);
-    }
+  parseNaturalLanguageTransaction: async (vietnamesePrompt: string): Promise<NLPParsedTransaction> => {
+    return coachModule.parseNLP(vietnamesePrompt);
+  },
+};
 
-    return response.json();
-  }
+// ==========================================
+// UNIFIED EXPORTABLE API OBJECT
+// ==========================================
 
-  public async askFinancialCoachQuestion(
-    question: string,
-    monthlyIncome: number,
-    monthlyExpense: number,
-    transactions: Transaction[]
-  ): Promise<{ answer: string }> {
-    const response = await fetch('/api/gemini/chat-advisor', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, monthlyIncome, monthlyExpense, transactions }),
-    });
+export const api = {
+  // Modules
+  auth: authModule,
+  wallets: walletsModule,
+  categories: categoriesModule,
+  transactions: transactionsModule,
+  groups: groupsModule,
+  bills: billsModule,
+  coach: coachModule,
+  ai: coachModule,
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini Chat Advisor Error: ${errorText}`);
-    }
+  // Direct top-level methods for full backward compatibility with legacy apiService calls
+  getIsMockMode: () => apiClient.getIsMockMode(),
+  setIsMockMode: (val: boolean) => apiClient.setIsMockMode(val),
+  getApiUrl: () => apiClient.getApiUrl(),
+  setApiUrl: (url: string) => apiClient.setApiUrl(url),
+  checkBackendHealth: () => apiClient.checkBackendHealth(),
+  getCurrentUser: () => authModule.getMe(),
+  login: (email: string, name?: string, password?: string) => authModule.login(email, name, password),
 
-    return response.json();
-  }
-}
+  getWallets: () => walletsModule.getAll(),
+  addWallet: (data: CreateWalletDto) => walletsModule.create(data),
+  updateWallet: (id: string, data: Partial<Wallet>) => walletsModule.update(id, data),
+  deleteWallet: (id: string) => walletsModule.delete(id),
+  transferWallet: (from: string, to: string, amount: number, note?: string) => walletsModule.transfer(from, to, amount, note),
 
-export const apiService = new ApiService();
+  getCategories: () => categoriesModule.getAll(),
+  addCategory: (cat: Omit<Category, 'id' | 'isDefault'>) => categoriesModule.create(cat),
+
+  getTransactions: (params?: GetTransactionsParams) => transactionsModule.getAll(params),
+  addTransaction: (data: CreateTransactionDto) => transactionsModule.create(data),
+  deleteTransaction: (id: string) => transactionsModule.delete(id),
+
+  getGroups: () => groupsModule.getAll(),
+  createGroup: (name: string, desc?: string, members?: { name: string; isGuest: boolean; email?: string }[]) => groupsModule.create(name, desc, members),
+
+  getGroupBills: (groupId?: string) => billsModule.getAll(groupId),
+  addGroupBill: (billData: CreateBillDto | Omit<GroupBill, 'id'>) => billsModule.create(billData),
+  getDebtLedger: () => billsModule.getDebts(),
+  settleDebt: (debtorName: string, creditorName: string, amount: number, walletId: string, groupName: string) => billsModule.settleDebt(debtorName, creditorName, amount, walletId, groupName),
+
+  scanReceiptOCR: (base64: string) => coachModule.scanReceiptOCR(base64),
+  parseNaturalLanguageTransaction: (prompt: string) => coachModule.parseNLP(prompt),
+  getFinancialCoachAdvice: (inc: number, exp: number, txs: Transaction[]) => coachModule.getFinancialCoachAdvice(inc, exp, txs),
+  askFinancialCoachQuestion: (q: string, inc: number, exp: number, txs: Transaction[]) => coachModule.askFinancialCoachQuestion(q, inc, exp, txs),
+};
+
+export const apiService = api;
+export default api;

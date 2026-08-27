@@ -1,12 +1,13 @@
 /**
  * SIVI WALLET - Group Debt Detail Modal
- * Shows breakdown of debts within a specific group and allows quick settlement
+ * Shows breakdown of debts within a specific group, adding members, and quick settlement
  */
 
-import React from 'react';
-import { X, Users, ArrowRight, Receipt, CheckCircle2, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Users, ArrowRight, Receipt, CheckCircle2, Plus, UserPlus, UserCheck } from 'lucide-react';
 import { Group, DebtSummary, GroupBill } from '../types';
 import { formatVND } from '../lib/formatters';
+import { api } from '../services/api';
 
 interface GroupDebtDetailModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface GroupDebtDetailModalProps {
   bills: GroupBill[];
   onSettleDebt: (debt: DebtSummary) => void;
   onAddBill: (groupId: string) => void;
+  onRefreshGroupData?: () => void;
 }
 
 export const GroupDebtDetailModal: React.FC<GroupDebtDetailModalProps> = ({
@@ -26,12 +28,47 @@ export const GroupDebtDetailModal: React.FC<GroupDebtDetailModalProps> = ({
   bills,
   onSettleDebt,
   onAddBill,
+  onRefreshGroupData,
 }) => {
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [addMemberError, setAddMemberError] = useState<string | null>(null);
+
   if (!isOpen || !group) return null;
 
   const groupDebts = debts.filter((d) => d.groupId === group.id);
   const totalGroupDebt = groupDebts.reduce((sum, d) => sum + d.amount, 0);
   const groupBills = bills.filter((b) => b.groupId === group.id);
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMemberName.trim()) {
+      setAddMemberError('Vui lòng nhập tên thành viên');
+      return;
+    }
+
+    setIsAddingMember(true);
+    setAddMemberError(null);
+
+    try {
+      await api.groups.addMember(group.id, {
+        name: newMemberName.trim(),
+        isGuest: !newMemberEmail.trim(),
+        email: newMemberEmail.trim() || undefined,
+      });
+
+      setNewMemberName('');
+      setNewMemberEmail('');
+      setShowAddMember(false);
+      if (onRefreshGroupData) onRefreshGroupData();
+    } catch (err: any) {
+      setAddMemberError(err.message || 'Lỗi khi thêm thành viên');
+    } finally {
+      setIsAddingMember(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#2D2926]/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -71,8 +108,71 @@ export const GroupDebtDetailModal: React.FC<GroupDebtDetailModalProps> = ({
             </div>
           </div>
 
+          {/* Members List Section */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xs font-bold text-[#4A443F] uppercase tracking-wider">
+                Thành viên trong nhóm ({group.members.length})
+              </h3>
+              <button
+                onClick={() => setShowAddMember(!showAddMember)}
+                className="text-xs font-bold text-[#7D8F69] hover:underline flex items-center gap-1"
+              >
+                <UserPlus className="w-3.5 h-3.5" /> {showAddMember ? 'Đóng' : '+ Thêm người'}
+              </button>
+            </div>
+
+            {showAddMember && (
+              <form onSubmit={handleAddMember} className="p-3 bg-[#F9F8F3] rounded-2xl border border-[#EAE7DC] space-y-2 animate-in fade-in">
+                <input
+                  type="text"
+                  value={newMemberName}
+                  onChange={(e) => setNewMemberName(e.target.value)}
+                  placeholder="Tên bạn bè mới..."
+                  className="w-full p-2 text-xs rounded-xl border border-[#EAE7DC] bg-white text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"
+                />
+                <input
+                  type="email"
+                  value={newMemberEmail}
+                  onChange={(e) => setNewMemberEmail(e.target.value)}
+                  placeholder="Email (tùy chọn)..."
+                  className="w-full p-2 text-xs rounded-xl border border-[#EAE7DC] bg-white text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none"
+                />
+                {addMemberError && <p className="text-[11px] text-[#D98B72] font-bold">{addMemberError}</p>}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddMember(false)}
+                    className="px-3 py-1.5 text-xs text-[#8C857D] rounded-lg"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isAddingMember}
+                    className="px-3.5 py-1.5 text-xs font-bold text-white bg-[#7D8F69] hover:bg-[#687856] rounded-xl transition"
+                  >
+                    {isAddingMember ? 'Đang thêm...' : 'Lưu Thành Viên'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            <div className="flex flex-wrap gap-1.5">
+              {group.members.map((m) => (
+                <span
+                  key={m.id}
+                  className="px-2.5 py-1 bg-[#F9F8F3] border border-[#EAE7DC] text-[#4A443F] text-xs font-semibold rounded-xl flex items-center gap-1.5"
+                >
+                  <span className="w-2 h-2 rounded-full bg-[#7D8F69]" />
+                  {m.name} {m.isGuest ? '(Khách)' : ''}
+                </span>
+              ))}
+            </div>
+          </div>
+
           {/* Pairwise Debts Section */}
-          <div className="space-y-3">
+          <div className="space-y-3 pt-2 border-t border-[#EAE7DC]">
             <div className="flex justify-between items-center">
               <h3 className="text-xs font-bold text-[#4A443F] uppercase tracking-wider">
                 Danh sách khoản nợ ({groupDebts.length})
@@ -146,7 +246,7 @@ export const GroupDebtDetailModal: React.FC<GroupDebtDetailModalProps> = ({
                     <div>
                       <p className="text-xs font-bold text-[#2D2926]">{b.title}</p>
                       <p className="text-[10px] text-[#8C857D]">
-                        {new Date(b.date).toLocaleDateString('vi-VN')} • Trả bởi {b.payerName}
+                        {new Date(b.date).toLocaleDateString('vi-VN')} • Trả bởi {b.payerMemberName || b.payerName || 'Thành viên'}
                       </p>
                     </div>
                     <span className="text-xs font-bold text-[#2D2926]">{formatVND(b.totalAmount)}</span>
