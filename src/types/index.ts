@@ -145,6 +145,12 @@ export interface DebtSummary {
   billDetailId?: string;
 }
 
+export interface DebtLedgerResponse {
+  totalYouOwe: number;
+  totalOwedToYou: number;
+  debts: DebtSummary[];
+}
+
 export interface ReceiptOCRResult {
   merchantName: string;
   totalAmount: number;

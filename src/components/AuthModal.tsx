@@ -25,7 +25,8 @@ import { getGreetingName } from '../lib/formatters';
 interface AuthModalProps {
   isOpen: boolean;
   onClose?: () => void;
-  onAuthSuccess: (user: User) => void;
+  onAuthSuccess?: (user: User) => void;
+  onSuccess?: () => void;
   canDismiss?: boolean;
 }
 
@@ -33,6 +34,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   onAuthSuccess,
+  onSuccess,
   canDismiss = false,
 }) => {
   const [isRegister, setIsRegister] = useState(false);
@@ -80,7 +82,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       showToast('success', `Đăng nhập thành công! Chào mừng ${getGreetingName(user)}.`);
       
       setTimeout(() => {
-        onAuthSuccess(user);
+        if (onAuthSuccess) onAuthSuccess(user);
+        if (onSuccess) onSuccess();
         if (onClose) onClose();
       }, 500);
     } catch (err: any) {
@@ -119,7 +122,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       showToast('success', 'Tạo tài khoản thành công! Đang thiết lập ví của bạn...');
 
       setTimeout(() => {
-        onAuthSuccess(user);
+        if (onAuthSuccess) onAuthSuccess(user);
+        if (onSuccess) onSuccess();
         if (onClose) onClose();
       }, 600);
     } catch (err: any) {
@@ -144,7 +148,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       showToast('success', 'Đang đăng nhập bằng Tài khoản Demo (user1)...');
 
       setTimeout(() => {
-        onAuthSuccess(user);
+        if (onAuthSuccess) onAuthSuccess(user);
+        if (onSuccess) onSuccess();
         if (onClose) onClose();
       }, 400);
     } catch (err: any) {

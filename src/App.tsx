@@ -57,6 +57,7 @@ import {
   Group,
   GroupBill,
   DebtSummary,
+  DebtLedgerResponse,
   TransactionType,
 } from './types';
 import { formatVND, formatVNDShort, getTxDate, formatDate, formatTxDateTime, formatLocalISO, getGreetingName } from './lib/formatters';
@@ -185,12 +186,14 @@ const renderCategoryIcon = (tx: Transaction) => {
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
 
-  // Core App State
+  // Core App State (Initialized with empty arrays, no mock data)
   const [user, setUser] = useState<User | null>(null);
   const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [debtLedger, setDebtLedger] = useState<DebtLedgerResponse>({ totalYouOwe: 0, totalOwedToYou: 0, debts: [] });
+  const [totalBalance, setTotalBalance] = useState<number>(0);
   const [bills, setBills] = useState<GroupBill[]>([]);
   const [debts, setDebts] = useState<DebtSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -239,12 +242,12 @@ export default function App() {
     setIsAddTxOpen(true);
   };
 
-  // Load All Data from API concurrently
-  const loadAppData = async () => {
+  // Reusable loadRealData Function (Fetch real data from Spring Boot backend)
+  const loadRealData = async () => {
     setIsLoading(true);
     try {
-      const [uData, wData, cData, tData, gData, bData, dData] = await Promise.all([
-        api.auth.getMe(),
+      const [uData, walletsRes, categoriesRes, transactionsRes, groupsRes, billsRes, debtsRes] = await Promise.all([
+        api.auth.getMe().catch(() => null),
         api.wallets.getAll(),
         api.categories.getAll(),
         api.transactions.getAll(),
@@ -253,67 +256,92 @@ export default function App() {
         api.bills.getDebts(),
       ]);
 
-      const walletList = Array.isArray(wData)
-        ? wData
-        : Array.isArray((wData as any)?.wallets)
-        ? (wData as any).wallets
-        : Array.isArray((wData as any)?.data)
-        ? (wData as any).data
+      if (uData) {
+        setUser(uData);
+      }
+
+      // Unpack wallet response
+      const walletList = Array.isArray(walletsRes)
+        ? walletsRes
+        : Array.isArray((walletsRes as any)?.wallets)
+        ? (walletsRes as any).wallets
+        : Array.isArray((walletsRes as any)?.data)
+        ? (walletsRes as any).data
         : [];
 
-      const categoryList = Array.isArray(cData)
-        ? cData
-        : Array.isArray((cData as any)?.categories)
-        ? (cData as any).categories
-        : Array.isArray((cData as any)?.data)
-        ? (cData as any).data
-        : [];
-
-      const transactionList = Array.isArray(tData)
-        ? tData
-        : Array.isArray((tData as any)?.transactions)
-        ? (tData as any).transactions
-        : Array.isArray((tData as any)?.data)
-        ? (tData as any).data
-        : [];
-
-      const groupList = Array.isArray(gData)
-        ? gData
-        : Array.isArray((gData as any)?.groups)
-        ? (gData as any).groups
-        : Array.isArray((gData as any)?.data)
-        ? (gData as any).data
-        : [];
-
-      const billList = Array.isArray(bData)
-        ? bData
-        : Array.isArray((bData as any)?.bills)
-        ? (bData as any).bills
-        : Array.isArray((bData as any)?.data)
-        ? (bData as any).data
-        : [];
-
-      const debtList = Array.isArray(dData)
-        ? dData
-        : Array.isArray((dData as any)?.debts)
-        ? (dData as any).debts
-        : Array.isArray((dData as any)?.data)
-        ? (dData as any).data
-        : [];
-
-      setUser(uData || null);
       setWallets(walletList);
+
+      if ((walletsRes as any)?.totalBalance !== undefined) {
+        setTotalBalance((walletsRes as any).totalBalance);
+      } else {
+        const calculatedTotal = walletList.reduce((sum: number, w: Wallet) => sum + (w?.balance || 0), 0);
+        setTotalBalance(calculatedTotal);
+      }
+
+      // Unpack categories
+      const categoryList = Array.isArray(categoriesRes)
+        ? categoriesRes
+        : Array.isArray((categoriesRes as any)?.categories)
+        ? (categoriesRes as any).categories
+        : Array.isArray((categoriesRes as any)?.data)
+        ? (categoriesRes as any).data
+        : [];
       setCategories(categoryList);
+
+      // Unpack transactions
+      const transactionList = Array.isArray(transactionsRes)
+        ? transactionsRes
+        : Array.isArray((transactionsRes as any)?.transactions)
+        ? (transactionsRes as any).transactions
+        : Array.isArray((transactionsRes as any)?.data)
+        ? (transactionsRes as any).data
+        : [];
       setTransactions(transactionList);
+
+      // Unpack groups
+      const groupList = Array.isArray(groupsRes)
+        ? groupsRes
+        : Array.isArray((groupsRes as any)?.groups)
+        ? (groupsRes as any).groups
+        : Array.isArray((groupsRes as any)?.data)
+        ? (groupsRes as any).data
+        : [];
       setGroups(groupList);
+
+      // Unpack bills
+      const billList = Array.isArray(billsRes)
+        ? billsRes
+        : Array.isArray((billsRes as any)?.bills)
+        ? (billsRes as any).bills
+        : Array.isArray((billsRes as any)?.data)
+        ? (billsRes as any).data
+        : [];
       setBills(billList);
+
+      // Unpack debts into both debtLedger and debts
+      const debtList = Array.isArray(debtsRes)
+        ? debtsRes
+        : Array.isArray((debtsRes as any)?.debts)
+        ? (debtsRes as any).debts
+        : Array.isArray((debtsRes as any)?.data)
+        ? (debtsRes as any).data
+        : [];
+
       setDebts(debtList);
+      setDebtLedger({
+        totalYouOwe: (debtsRes as any)?.totalYouOwe || 0,
+        totalOwedToYou: (debtsRes as any)?.totalOwedToYou || 0,
+        debts: debtList,
+      });
     } catch (err) {
-      console.error('Error loading Sivi Wallet data:', err);
+      console.error('Error loading Sivi Wallet real backend data:', err);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Keep loadAppData as alias to loadRealData
+  const loadAppData = loadRealData;
 
   // Synchronize Offline Queue to Backend
   const syncOfflineQueue = async () => {
@@ -333,7 +361,7 @@ export default function App() {
       }
 
       localStorage.removeItem('sivi_offline_queue');
-      await loadAppData();
+      await loadRealData();
       setToastMessage('🎉 Đồng bộ giao dịch ngoại tuyến lên máy chủ thành công!');
       setTimeout(() => setToastMessage(null), 4000);
     } catch (err) {
@@ -345,7 +373,7 @@ export default function App() {
   useEffect(() => {
     const hasToken = localStorage.getItem('sivi_token') || api.auth.isAuthenticated();
     if (hasToken) {
-      loadAppData();
+      loadRealData();
     } else {
       setIsLoading(false);
       setIsAuthModalOpen(true);
@@ -374,10 +402,10 @@ export default function App() {
     };
   }, []);
 
-  const handleAuthSuccess = (uData: User) => {
+  const handleAuthSuccess = async (uData: User) => {
     setUser(uData);
     setIsAuthModalOpen(false);
-    loadAppData();
+    await loadRealData();
   };
 
   const handleLogout = () => {
@@ -393,7 +421,7 @@ export default function App() {
   const safeBills = Array.isArray(bills) ? bills : [];
   const safeDebts = Array.isArray(debts) ? debts : [];
 
-  const totalBalance = safeWallets.reduce((sum, w) => sum + (w?.balance || 0), 0);
+  const currentTotalBalance = totalBalance || safeWallets.reduce((sum, w) => sum + (w?.balance || 0), 0);
 
   const monthlyIncome = safeTransactions
     .filter((t) => t?.type === 'INCOME')
@@ -743,7 +771,7 @@ export default function App() {
                     <p className="text-[10px] sm:text-xs opacity-80 uppercase tracking-widest font-bold">
                       Tổng số dư khả dụng
                     </p>
-                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mt-1 tracking-tight">{formatVND(totalBalance)}</h2>
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mt-1 tracking-tight">{formatVND(currentTotalBalance)}</h2>
                   </div>
 
                   <div className="flex gap-2.5 sm:gap-4">
