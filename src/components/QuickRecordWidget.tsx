@@ -150,6 +150,9 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
   const [ocrSuccessMsg, setOcrSuccessMsg] = useState<string | null>(null);
   const [ocrErrorMsg, setOcrErrorMsg] = useState<string | null>(null);
 
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   // Available categories filtered by active manualType
   const availableCategories = useMemo(() => {
     const filtered = categories.filter((c) => {
@@ -465,41 +468,73 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
         </form>
       )}
 
-      {/* TAB 2: OCR RECEIPT SCAN WITH NOTE & DRAG AND DROP */}
+      {/* TAB 2: OCR RECEIPT SCAN WITH DIRECT CAMERA CAPTURE & GALLERY UPLOAD */}
       {activeTab === 'ocr' && (
         <div className="space-y-3">
+          {/* Hidden inputs for camera capture & gallery file pick */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) handleImageFile(e.target.files[0]);
+            }}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) handleImageFile(e.target.files[0]);
+            }}
+          />
+
           {!previewUrl ? (
-            <label
-              onDragOver={handleDragOver}
-              onDragEnter={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer transition text-center group ${
-                isDragging
-                  ? 'border-[#7D8F69] bg-[#7D8F69]/10 scale-[1.01] ring-2 ring-[#7D8F69]/30'
-                  : 'border-[#EAE7DC] hover:border-[#7D8F69] bg-[#F9F8F3] hover:bg-[#F1EFE7]/50'
-              }`}
-            >
-              <div className="w-11 h-11 rounded-2xl bg-white shadow-2xs border border-[#EAE7DC] flex items-center justify-center mb-2 group-hover:scale-105 transition">
-                <Upload className="w-5 h-5 text-[#7D8F69]" />
+            <div className="space-y-2.5">
+              {/* Dual Action Buttons for Mobile & Quick Capture */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-[#7D8F69] hover:bg-[#687856] text-white flex flex-col items-center justify-center gap-1.5 transition active:scale-[0.98] shadow-xs text-center group"
+                >
+                  <Camera className="w-5 h-5 group-hover:scale-110 transition" />
+                  <span className="text-xs font-extrabold leading-tight">Chụp Camera</span>
+                  <span className="text-[9px] opacity-80 hidden sm:inline">Mở máy ảnh chụp trực tiếp</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-[#F9F8F3] hover:bg-[#F1EFE7] text-[#2D2926] border border-[#EAE7DC] hover:border-[#7D8F69] flex flex-col items-center justify-center gap-1.5 transition active:scale-[0.98] text-center group"
+                >
+                  <ImageIcon className="w-5 h-5 text-[#7D8F69] group-hover:scale-110 transition" />
+                  <span className="text-xs font-extrabold leading-tight">Chọn Thư Viện</span>
+                  <span className="text-[9px] text-[#8C857D] hidden sm:inline">Tải ảnh từ album thiết bị</span>
+                </button>
               </div>
-              <span className="text-xs font-bold text-[#2D2926]">
-                {isDragging ? 'Thả ảnh hóa đơn vào đây ngay...' : 'Kéo thả hoặc nhấn để chọn ảnh hóa đơn'}
-              </span>
-              <span className="text-[10px] text-[#8C857D] mt-0.5">
-                Hỗ trợ JPG, PNG, WEBP — Gemini Vision bóc tách món ăn, tổng tiền & tự động lưu
-              </span>
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    handleImageFile(e.target.files[0]);
-                  }
-                }}
-              />
-            </label>
+
+              {/* Drag and Drop Box - Hidden on mobile, shown on desktop (md:) */}
+              <div
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`hidden md:block border-2 border-dashed rounded-xl sm:rounded-2xl p-3 text-center cursor-pointer transition ${
+                  isDragging
+                    ? 'border-[#7D8F69] bg-[#7D8F69]/10 scale-[1.01]'
+                    : 'border-[#EAE7DC] hover:border-[#7D8F69] bg-[#F9F8F3]'
+                }`}
+              >
+                <p className="text-[11px] font-bold text-[#8C857D]">
+                  Hoặc kéo thả file ảnh hóa đơn vào đây
+                </p>
+              </div>
+            </div>
           ) : (
             <div className="space-y-3">
               {/* Image Preview Card */}

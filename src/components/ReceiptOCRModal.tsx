@@ -1,9 +1,10 @@
 /**
  * SIVI WALLET - Receipt OCR Modal (Gemini Vision)
+ * Allows direct camera capture on mobile or uploading image from gallery/device.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Sparkles, Check, X, AlertCircle, Plus, Trash2, MessageSquare, ArrowLeft } from 'lucide-react';
+import { Camera, Upload, Sparkles, Check, X, AlertCircle, Plus, Trash2, MessageSquare, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 import { api } from '../services/api';
 import { geminiService } from '../services/geminiService';
 import { ReceiptOCRResult, Wallet, Category, TransactionType } from '../types';
@@ -18,41 +19,6 @@ interface ReceiptOCRModalProps {
   onSave?: (transactionData: any) => Promise<void> | void;
 }
 
-// Sample dummy receipts for quick testing without uploading
-const SAMPLE_RECEIPTS = [
-  {
-    name: 'Phở Hòa Pasteur (65.000 đ)',
-    url: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=500&auto=format&fit=crop&q=80',
-    data: {
-      merchantName: 'Phở Hòa Pasteur',
-      totalAmount: 65000,
-      transactionDate: new Date().toISOString().substring(0, 16),
-      category: 'Ăn uống',
-      paymentMethod: 'Ví MoMo',
-      items: [
-        { name: 'Phở tái nạm gầu', price: 60000, quantity: 1 },
-        { name: 'Trà đá', price: 5000, quantity: 1 },
-      ],
-    },
-  },
-  {
-    name: 'Siêu thị WinMart+ (185.000 đ)',
-    url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=80',
-    data: {
-      merchantName: 'Siêu thị WinMart+',
-      totalAmount: 185000,
-      transactionDate: new Date().toISOString().substring(0, 16),
-      category: 'Mua sắm',
-      paymentMethod: 'Tiền mặt',
-      items: [
-        { name: 'Sữa tươi TH True Milk 1L', price: 38000, quantity: 2 },
-        { name: 'Bánh mì gối Sandwich', price: 25000, quantity: 1 },
-        { name: 'Táo Red Delicious 1kg', price: 84000, quantity: 1 },
-      ],
-    },
-  },
-];
-
 export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
   isOpen,
   onClose,
@@ -63,7 +29,6 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [selectedSample, setSelectedSample] = useState<typeof SAMPLE_RECEIPTS[0] | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +36,8 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
   const [selectedWalletId, setSelectedWalletId] = useState<string>(wallets[0]?.id || '');
   const [userNote, setUserNote] = useState<string>('');
   const [isDragOver, setIsDragOver] = useState(false);
+
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Synchronize and initialize selectedWalletId whenever wallets or modal open state change
@@ -86,7 +53,6 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
 
   const handleImageFileSelect = (file: File) => {
     setSelectedFile(file);
-    setSelectedSample(null);
     setOcrResult(null);
 
     const reader = new FileReader();
@@ -101,26 +67,19 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
     if (file) handleImageFileSelect(file);
   };
 
-  const handleSelectSample = (sample: typeof SAMPLE_RECEIPTS[0]) => {
-    setSelectedSample(sample);
-    setSelectedFile(null);
-    setImagePreview(sample.url);
-    setOcrResult(null);
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(true);
   };
 
-  const handleDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
@@ -134,7 +93,6 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
   const resetAll = () => {
     setSelectedFile(null);
     setImagePreview(null);
-    setSelectedSample(null);
     setOcrResult(null);
     setIsLoading(false);
     setError(null);
@@ -143,71 +101,49 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
 
   // Step 1 -> Step 2 -> Step 3 Trigger
   const handleAnalyzeReceipt = async () => {
-    if (!imagePreview) return;
+    if (!imagePreview || !selectedFile) return;
 
     setIsLoading(true);
     setError(null);
     setOcrResult(null);
 
     try {
-      if (selectedFile) {
-        // Real Gemini AI multimodal OCR scan
-        const result = await geminiService.scanReceipt(selectedFile, userNote || undefined);
-        const nowLocal = toDateTimeLocalString(new Date());
-        const mappedResult: ReceiptOCRResult = {
-          merchantName: result.merchantName || 'Cửa hàng không rõ',
-          totalAmount: result.totalAmount || 0,
-          transactionDate: result.transactionDate || nowLocal,
-          category: result.category || 'Khác',
-          paymentMethod: result.paymentMethod || 'Tiền mặt',
-          items: (result.items || []).map((item: any) => ({
-            name: item.name || item.itemName || 'Món ăn/Hàng hóa',
-            price: item.price || item.totalPrice || 0,
-            quantity: item.quantity || 1,
-          })),
-          rawNotes: result.note || undefined,
-        };
-        setOcrResult(mappedResult);
-        if (!userNote && result.note) {
-          setUserNote(result.note);
-        }
+      // Real Gemini AI multimodal OCR scan
+      const result = await geminiService.scanReceipt(selectedFile, userNote || undefined);
+      const nowLocal = toDateTimeLocalString(new Date());
+      const mappedResult: ReceiptOCRResult = {
+        merchantName: result.merchantName || 'Cửa hàng không rõ',
+        totalAmount: result.totalAmount || 0,
+        transactionDate: result.transactionDate || nowLocal,
+        category: result.category || 'Khác',
+        paymentMethod: result.paymentMethod || 'Tiền mặt',
+        items: (result.items || []).map((item: any) => ({
+          name: item.name || item.itemName || 'Món ăn/Hàng hóa',
+          price: item.price || item.totalPrice || 0,
+          quantity: item.quantity || 1,
+        })),
+        rawNotes: result.note || undefined,
+      };
+      setOcrResult(mappedResult);
+      if (!userNote && result.note) {
+        setUserNote(result.note);
+      }
 
-        // Auto-match wallet from Gemini extracted info, paymentMethod, or note
-        const textToCheck = `${result.paymentMethod || ''} ${result.note || ''} ${userNote || ''}`.toLowerCase();
-        const matchedWallet = wallets.find((w) => {
-          const wName = w.name.toLowerCase();
-          const bName = (w.bankName || '').toLowerCase();
-          return (
-            textToCheck.includes(wName) ||
-            (bName && textToCheck.includes(bName)) ||
-            (w.type === 'E_WALLET' && (textToCheck.includes('momo') || textToCheck.includes('ví') || textToCheck.includes('zalopay'))) ||
-            (w.type === 'CASH' && (textToCheck.includes('tiền mặt') || textToCheck.includes('cash'))) ||
-            (w.type === 'BANK' && (textToCheck.includes('vcb') || textToCheck.includes('vietcombank') || textToCheck.includes('ngân hàng') || textToCheck.includes('chuyển khoản') || textToCheck.includes('bank') || textToCheck.includes('techcombank') || textToCheck.includes('mbbank') || textToCheck.includes('acb') || textToCheck.includes('bidv')))
-          );
-        });
-        if (matchedWallet) {
-          setSelectedWalletId(matchedWallet.id);
-        }
-      } else if (selectedSample) {
-        // Sample receipt simulation with prompt delay
-        await new Promise((res) => setTimeout(res, 1200));
-        setOcrResult(selectedSample.data as ReceiptOCRResult);
-        if (!userNote) {
-          setUserNote('Hóa đơn mẫu - ' + selectedSample.name);
-        }
-
-        const sampleText = `${selectedSample.data.paymentMethod || ''} ${selectedSample.name}`.toLowerCase();
-        const matchedWallet = wallets.find((w) => {
-          const wName = w.name.toLowerCase();
-          return (
-            sampleText.includes(wName) ||
-            (w.type === 'E_WALLET' && sampleText.includes('momo')) ||
-            (w.type === 'CASH' && sampleText.includes('tiền mặt'))
-          );
-        });
-        if (matchedWallet) {
-          setSelectedWalletId(matchedWallet.id);
-        }
+      // Auto-match wallet from Gemini extracted info, paymentMethod, or note
+      const textToCheck = `${result.paymentMethod || ''} ${result.note || ''} ${userNote || ''}`.toLowerCase();
+      const matchedWallet = wallets.find((w) => {
+        const wName = w.name.toLowerCase();
+        const bName = (w.bankName || '').toLowerCase();
+        return (
+          textToCheck.includes(wName) ||
+          (bName && textToCheck.includes(bName)) ||
+          (w.type === 'E_WALLET' && (textToCheck.includes('momo') || textToCheck.includes('ví') || textToCheck.includes('zalopay'))) ||
+          (w.type === 'CASH' && (textToCheck.includes('tiền mặt') || textToCheck.includes('cash'))) ||
+          (w.type === 'BANK' && (textToCheck.includes('vcb') || textToCheck.includes('vietcombank') || textToCheck.includes('ngân hàng') || textToCheck.includes('chuyển khoản') || textToCheck.includes('bank') || textToCheck.includes('techcombank') || textToCheck.includes('mbbank') || textToCheck.includes('acb') || textToCheck.includes('bidv')))
+        );
+      });
+      if (matchedWallet) {
+        setSelectedWalletId(matchedWallet.id);
       }
     } catch (err: any) {
       console.error(err);
@@ -316,55 +252,82 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
-          {/* STEP 1A: Dropzone & Sample Receipts Selector (If no image is picked yet) */}
+          {/* Hidden inputs for Camera Capture & File Upload */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleFileInputChange}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileInputChange}
+          />
+
+          {/* STEP 1A: Camera Capture & File Upload Selector (When no image is loaded yet) */}
           {!imagePreview && (
             <div className="space-y-4">
-              <label
-                className={`flex flex-col items-center justify-center w-full h-48 sm:h-52 border-2 border-dashed rounded-2xl cursor-pointer transition-all group ${
-                  isDragOver
-                    ? 'border-[#7D8F69] bg-[#7D8F69]/10 scale-[1.01]'
-                    : 'border-[#EAE7DC] hover:border-[#7D8F69] hover:bg-[#F9F8F3]'
-                }`}
+              <p className="text-xs font-extrabold text-[#4A443F] uppercase tracking-wider">
+                Chọn phương thức tải hóa đơn:
+              </p>
+
+              {/* Mobile / Primary Dual Action Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Direct Camera Capture Button */}
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="p-5 rounded-2xl bg-[#7D8F69] hover:bg-[#687856] text-white flex flex-col items-center justify-center gap-3 transition active:scale-[0.98] shadow-sm text-center group"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition">
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-extrabold block">Chụp Từ Camera</span>
+                    <span className="text-[11px] text-white/80 mt-0.5 block">Mở máy ảnh điện thoại chụp hóa đơn</span>
+                  </div>
+                </button>
+
+                {/* Upload Image from Gallery Button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-5 rounded-2xl bg-[#F9F8F3] hover:bg-[#F1EFE7] text-[#2D2926] border border-[#EAE7DC] hover:border-[#7D8F69] flex flex-col items-center justify-center gap-3 transition active:scale-[0.98] text-center group"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-[#7D8F69]/10 text-[#7D8F69] flex items-center justify-center group-hover:scale-110 transition">
+                    <ImageIcon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-extrabold block">Chọn Từ Thư Viện</span>
+                    <span className="text-[11px] text-[#8C857D] mt-0.5 block">Tải ảnh hóa đơn có sẵn từ thiết bị</span>
+                  </div>
+                </button>
+              </div>
+
+              {/* Drag and Drop Zone - Hidden on mobile, visible on Desktop/Tablets (md:) */}
+              <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`hidden md:flex p-5 border-2 border-dashed rounded-2xl cursor-pointer text-center transition flex-col items-center justify-center ${
+                  isDragOver
+                    ? 'border-[#7D8F69] bg-[#7D8F69]/10 scale-[1.01]'
+                    : 'border-[#EAE7DC] hover:border-[#7D8F69] bg-[#F9F8F3]'
+                }`}
               >
-                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
-                  <div className={`p-3 mb-3 rounded-full bg-[#7D8F69]/15 text-[#7D8F69] transition-transform ${isDragOver ? 'scale-125' : 'group-hover:scale-110'}`}>
-                    {isDragOver ? <Upload className="w-7 h-7" /> : <Camera className="w-7 h-7" />}
-                  </div>
-                  <p className="mb-1 text-sm font-bold text-[#2D2926]">
-                    {isDragOver ? 'Thả ảnh hóa đơn vào đây!' : 'Nhấp để tải lên hoặc kéo thả ảnh hóa đơn'}
-                  </p>
-                  <p className="text-xs text-[#8C857D]">
-                    Hỗ trợ JPG, PNG, WEBP (chụp hóa đơn nhà hàng, siêu thị, phiếu thu...)
-                  </p>
-                </div>
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileInputChange} />
-              </label>
-
-              {/* Sample receipts quick test */}
-              <div className="pt-2">
-                <p className="text-xs font-bold text-[#8C857D] uppercase tracking-wider mb-2">
-                  Hoặc chọn hóa đơn mẫu trải nghiệm nhanh:
+                <Upload className="w-6 h-6 text-[#8C857D] mb-1.5" />
+                <p className="text-xs font-bold text-[#2D2926]">
+                  Hoặc kéo thả ảnh hóa đơn vào khung này
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {SAMPLE_RECEIPTS.map((s, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSelectSample(s)}
-                      className="flex items-center gap-3 p-3 text-left rounded-2xl border border-[#EAE7DC] hover:border-[#7D8F69] bg-[#F9F8F3] hover:bg-[#F1EFE7] transition group"
-                    >
-                      <img src={s.url} alt={s.name} className="w-12 h-12 object-cover rounded-xl shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-[#2D2926] truncate group-hover:text-[#7D8F69]">
-                          {s.name}
-                        </p>
-                        <p className="text-[11px] text-[#8C857D]">Bấm để chọn mẫu</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                <p className="text-[10px] text-[#8C857D] mt-0.5">
+                  Hỗ trợ định dạng JPG, PNG, WEBP
+                </p>
               </div>
             </div>
           )}
@@ -392,7 +355,7 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
                   <div className="space-y-4 bg-[#F9F8F3] p-4 rounded-2xl border border-[#EAE7DC]">
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5">
-                        <MessageSquare className="w-4 h-4 text-[#D98B72]" /> 💬 Lời dặn cho AI (Tùy chọn)
+                        <MessageSquare className="w-4 h-4 text-[#7D8F69]" /> Lời dặn cho AI (Tùy chọn)
                       </label>
                       <textarea
                         value={userNote}
@@ -580,7 +543,7 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
                     {/* Editable Note / Split info */}
                     <div className="p-3.5 rounded-2xl bg-[#F9F8F3] border border-[#EAE7DC]">
                       <label className="text-[11px] font-bold text-[#4A443F] uppercase tracking-wider flex items-center gap-1 mb-1.5">
-                        <MessageSquare className="w-3.5 h-3.5 text-[#D98B72]" /> 💬 Ghi chú / Chia tiền
+                        <MessageSquare className="w-3.5 h-3.5 text-[#7D8F69]" /> Ghi chú / Chia tiền
                       </label>
                       <textarea
                         value={userNote}
@@ -590,8 +553,8 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
                         className="w-full p-2.5 text-xs font-medium rounded-xl bg-white border border-[#EAE7DC] text-[#2D2926] placeholder:text-[#8C857D] focus:outline-none focus:ring-2 focus:ring-[#7D8F69] transition resize-none"
                       />
                       {ocrResult.rawNotes && (
-                        <p className="mt-1.5 text-[10px] text-[#8C857D] italic">
-                          💡 AI trích xuất: {ocrResult.rawNotes}
+                        <p className="mt-1.5 text-[10px] text-[#8C857D] flex items-center gap-1 italic">
+                          <Sparkles className="w-3 h-3 text-[#7D8F69] shrink-0" /> Ghi chú từ AI: {ocrResult.rawNotes}
                         </p>
                       )}
                     </div>
