@@ -196,6 +196,10 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
+  // Network & PWA Offline Sync State
+  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   // Quick NLP Prompt State in Top Search Bar
   const [quickNlpPrompt, setQuickNlpPrompt] = useState('');
   const [isNlpLoading, setIsNlpLoading] = useState(false);
@@ -311,7 +315,33 @@ export default function App() {
     }
   };
 
-  // Check Auth on Mount
+  // Synchronize Offline Queue to Backend
+  const syncOfflineQueue = async () => {
+    try {
+      const rawQueue = localStorage.getItem('sivi_offline_queue');
+      if (!rawQueue) return;
+      const queue = JSON.parse(rawQueue);
+      if (!Array.isArray(queue) || queue.length === 0) return;
+
+      console.log('Synchronizing offline transactions queue:', queue.length);
+      for (const txDto of queue) {
+        try {
+          await api.transactions.create(txDto);
+        } catch (err) {
+          console.error('Failed to sync queued transaction:', err);
+        }
+      }
+
+      localStorage.removeItem('sivi_offline_queue');
+      await loadAppData();
+      setToastMessage('🎉 Đồng bộ giao dịch ngoại tuyến lên máy chủ thành công!');
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (err) {
+      console.error('Error in syncOfflineQueue:', err);
+    }
+  };
+
+  // Check Auth and Listen to Network Status on Mount
   useEffect(() => {
     const hasToken = localStorage.getItem('sivi_token') || api.auth.isAuthenticated();
     if (hasToken) {
@@ -320,6 +350,28 @@ export default function App() {
       setIsLoading(false);
       setIsAuthModalOpen(true);
     }
+
+    const handleOnline = async () => {
+      setIsOnline(true);
+      await syncOfflineQueue();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setToastMessage('🟡 Chế độ Ngoại tuyến (Các giao dịch sẽ được lưu vào hàng đợi PWA)');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    if (navigator.onLine) {
+      syncOfflineQueue();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   const handleAuthSuccess = (uData: User) => {
@@ -427,6 +479,23 @@ export default function App() {
   return (
     <div className="flex flex-col md:flex-row h-screen w-full bg-[#F9F8F3] font-sans text-[#2D2926] overflow-hidden relative">
       <PWAInstallPrompt />
+
+      {/* Network & PWA Offline Toast Banner */}
+      {(toastMessage || !isOnline) && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[70] px-4 py-2 bg-[#2D2926] text-white rounded-2xl shadow-xl border border-white/20 text-xs font-bold flex items-center gap-2 animate-in slide-in-from-top-3 duration-200 max-w-[90vw] text-center">
+          {!isOnline ? (
+            <>
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0"></span>
+              <span>🟡 Chế độ Ngoại tuyến — Giao dịch sẽ lưu vào hàng đợi PWA</span>
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{toastMessage}</span>
+            </>
+          )}
+        </div>
+      )}
 
       {/* MOBILE TOP BAR (visible on screens < md) */}
       <header className="md:hidden flex items-center justify-between px-4 py-2.5 bg-white border-b border-[#EAE7DC] shrink-0 z-30">

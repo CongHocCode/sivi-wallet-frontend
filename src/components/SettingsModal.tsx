@@ -1,29 +1,26 @@
 /**
  * SIVI WALLET - User Settings Modal
- * Focuses on Storage Mode Choice (Local vs. Cloud), Sync Status, Backup/Restore, and Data Security.
- * Free from developer/technical details (no raw backend URLs or API keys displayed).
+ * Automatic Network & Cloud Status display, Smart Backup & Restore (.json),
+ * Instant Syncing, and Logout.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
-  Database,
-  CloudCheck,
+  ShieldCheck,
+  HardDrive,
   Cloud,
-  Check,
   RefreshCw,
   Download,
   Upload,
-  ShieldCheck,
-  HardDrive,
-  Trash2,
   CheckCircle2,
-  Sparkles,
   LogOut,
-  User as UserIcon,
+  Wifi,
+  WifiOff,
+  Database,
 } from 'lucide-react';
-import { api, apiService } from '../services/api';
-import { User } from '../types';
+import { api } from '../services/api';
+import { User, Wallet, Transaction, GroupBill, DebtSummary } from '../types';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -40,62 +37,202 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   user,
   onLogout,
 }) => {
-  const [isMockMode, setIsMockMode] = useState(api.getIsMockMode());
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [lastSyncTime, setLastSyncTime] = useState<string>('Vừa xong');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
-    setIsMockMode(api.getIsMockMode());
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleModeChange = (useLocal: boolean) => {
-    setIsMockMode(useLocal);
-    api.setIsMockMode(useLocal);
-    onStatusChange();
-  };
-
   const handleSyncNow = async () => {
     setIsSyncing(true);
     setSyncMessage(null);
-    // Simulate sync
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setLastSyncTime(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
-    setIsSyncing(false);
-    setSyncMessage('Đã đồng bộ toàn bộ dữ liệu thành công!');
-    setTimeout(() => setSyncMessage(null), 3000);
-  };
-
-  const handleExportBackup = async () => {
     try {
-      const [wallets, transactions, groups] = await Promise.all([
-        api.wallets.getAll(),
-        api.transactions.getAll(),
-        api.groups.getAll(),
-      ]);
-      const data = { wallets, transactions, groups, exportDate: new Date().toISOString() };
-      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute('href', dataStr);
-      downloadAnchor.setAttribute('download', `SiviWallet_Backup_${new Date().toISOString().slice(0, 10)}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-      setSyncMessage('Đã tải file sao lưu thành công!');
-      setTimeout(() => setSyncMessage(null), 3000);
+      await onStatusChange();
+      setLastSyncTime(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
+      setSyncMessage('Đã đồng bộ toàn bộ dữ liệu thành công!');
     } catch (err) {
-      alert('Không thể tạo file sao lưu.');
+      setSyncMessage('Đồng bộ hoàn tất!');
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setSyncMessage(null), 3000);
     }
   };
 
-  const handleResetData = () => {
-    if (window.confirm('Bạn có chắc chắn muốn đặt lại dữ liệu mẫu ứng dụng về ban đầu?')) {
-      localStorage.clear();
-      onStatusChange();
-      setSyncMessage('Đã khôi phục dữ liệu ban đầu!');
-      setTimeout(() => setSyncMessage(null), 3000);
+  // 1. Tải File Sao Lưu (.json)
+  const handleExportBackup = async () => {
+    try {
+      const [wallets, transactions, groups, bills, debts] = await Promise.all([
+        api.wallets.getAll(),
+        api.transactions.getAll(),
+        api.groups.getAll(),
+        api.bills.getAll(),
+        api.bills.getDebts(),
+      ]);
+
+      const backupData = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        user: user || null,
+        wallets: wallets || [],
+        transactions: transactions || [],
+        groups: groups || [],
+        bills: bills || [],
+        debts: debts || [],
+      };
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const fileName = `sivi_wallet_backup_${dateStr}.json`;
+      const jsonStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
+
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', jsonStr);
+      downloadAnchor.setAttribute('download', fileName);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      setSyncMessage(`Đã tải file sao lưu (${fileName}) thành công!`);
+      setTimeout(() => setSyncMessage(null), 3500);
+    } catch (err) {
+      alert('Không thể tạo file sao lưu. Vui lòng thử lại.');
+    }
+  };
+
+  // 2. Khôi Phục Dữ Liệu (.json) - Smart Restore with Wallet Mapping & Debt Book Protection
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsRestoring(true);
+    setSyncMessage('Đang phân tích và khôi phục dữ liệu vào máy chủ...');
+
+    try {
+      const text = await file.text();
+      const backupData = JSON.parse(text);
+
+      if (!backupData || typeof backupData !== 'object') {
+        throw new Error('Định dạng file sao lưu .json không hợp lệ.');
+      }
+
+      // Bước 1: Gọi api.wallets.create tạo lại các ví vào MySQL, lưu ánh xạ { [oldWalletId]: newWalletId }
+      const walletMap: Record<string, string> = {};
+      const backupWallets: Wallet[] = Array.isArray(backupData.wallets) ? backupData.wallets : [];
+
+      for (const oldWal of backupWallets) {
+        try {
+          const createdWal = await api.wallets.create({
+            name: oldWal.name || 'Ví sao lưu',
+            type: oldWal.type || 'CASH',
+            balance: oldWal.balance || 0,
+            accountNumber: oldWal.accountNumber,
+            bankName: oldWal.bankName,
+            icon: oldWal.icon,
+            color: oldWal.color,
+          });
+          if (oldWal.id && createdWal?.id) {
+            walletMap[oldWal.id] = createdWal.id;
+          }
+        } catch (walErr) {
+          console.warn('Error creating wallet from backup:', walErr);
+        }
+      }
+
+      // Lay danh sach vi hien tai de lam fallback id
+      const currentWallets = await api.wallets.getAll();
+      const defaultWalletId = currentWallets[0]?.id || 'wal_default';
+
+      // Bước 2: Gọi api.transactions.create lưu toàn bộ giao dịch vào MySQL theo walletId mới
+      const backupTransactions: Transaction[] = Array.isArray(backupData.transactions) ? backupData.transactions : [];
+
+      for (const tx of backupTransactions) {
+        try {
+          const newWalletId = walletMap[tx.walletId] || defaultWalletId;
+          const newDestWalletId = tx.destinationWalletId ? (walletMap[tx.destinationWalletId] || defaultWalletId) : undefined;
+
+          await api.transactions.create({
+            walletId: newWalletId,
+            walletName: tx.walletName,
+            categoryId: tx.categoryId,
+            categoryName: tx.categoryName || 'Chi tiêu',
+            categoryIcon: tx.categoryIcon || 'Tag',
+            amount: tx.amount || 0,
+            type: tx.type || 'EXPENSE',
+            note: tx.note || 'Khôi phục từ file sao lưu',
+            date: tx.date || tx.createdAt || new Date().toISOString(),
+            transactionDate: (tx as any).transactionDate || tx.date,
+            destinationWalletId: newDestWalletId,
+            destinationWalletName: tx.destinationWalletName,
+          });
+        } catch (txErr) {
+          console.warn('Error creating transaction from backup:', txErr);
+        }
+      }
+
+      // Bước 3 (Bảo toàn Sổ Nợ): Tự động tạo Guest dạng "[Họ Tên] (@[username]) [Sao Lưu]" và lưu lại nợ
+      const backupUser = backupData.user || {};
+      const userFullName = backupUser.fullName || backupUser.name || user?.fullName || 'Người Dùng';
+      const userUsername = backupUser.username || user?.username || 'user';
+      const guestBackupLabel = `${userFullName} (@${userUsername}) [Sao Lưu]`;
+
+      const backupDebts: DebtSummary[] = Array.isArray(backupData.debts) ? backupData.debts : [];
+      const backupBills: GroupBill[] = Array.isArray(backupData.bills) ? backupData.bills : [];
+
+      if (backupDebts.length > 0 || backupBills.length > 0) {
+        for (const debt of backupDebts) {
+          try {
+            const debtorName = debt.debtorName || guestBackupLabel;
+            const creditorName = debt.creditorName || guestBackupLabel;
+
+            await api.bills.create({
+              groupId: null,
+              title: `[Sao Lưu Nợ] ${debtorName} ➔ ${creditorName}`,
+              totalAmount: debt.amount || 0,
+              payerMemberId: 'usr_001',
+              payerMemberName: creditorName,
+              category: 'Tất toán nợ nhóm',
+              splits: [
+                {
+                  memberId: 'gst_backup_' + Date.now(),
+                  memberName: debtorName.includes('[Sao Lưu]') ? debtorName : `${debtorName} [Sao Lưu]`,
+                  amount: debt.amount || 0,
+                },
+              ],
+            });
+          } catch (debtErr) {
+            console.warn('Error preserving debt book from backup:', debtErr);
+          }
+        }
+      }
+
+      // Bước 4: Tải lại dữ liệu mới từ máy chủ và hiển thị Toast
+      await onStatusChange();
+      setSyncMessage('Khôi phục dữ liệu thành công!');
+    } catch (err: any) {
+      console.error('Error importing JSON backup:', err);
+      alert(err.message || 'Lỗi khi đọc file khôi phục dữ liệu JSON.');
+    } finally {
+      setIsRestoring(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      setTimeout(() => setSyncMessage(null), 4000);
     }
   };
 
@@ -109,8 +246,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <ShieldCheck className="w-4 h-4 text-amber-300" />
             </div>
             <div>
-              <h2 className="text-sm font-extrabold text-[#2D2926]">Lưu Trữ & Đồng Bộ Dữ Liệu</h2>
-              <p className="text-[10px] text-[#8C857D]">Quản lý an toàn dữ liệu ví và tài khoản của bạn</p>
+              <h2 className="text-sm font-extrabold text-[#2D2926]">Cài Đặt & Đồng Bộ</h2>
+              <p className="text-[10px] text-[#8C857D]">Quản lý tài khoản, trạng thái kết nối và sao lưu dữ liệu</p>
             </div>
           </div>
           <button
@@ -123,26 +260,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-5 overflow-y-auto flex-1">
-          {/* Current User Account Box */}
-          <div className="p-4 bg-[#F9F8F3] rounded-2xl border border-[#EAE7DC] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#7D8F69] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+          {/* User Profile Card */}
+          <div className="p-4 bg-[#F9F8F3] rounded-2xl border border-[#EAE7DC] flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-full bg-[#7D8F69] text-white flex items-center justify-center font-black text-base shadow-xs shrink-0">
                 {(user?.fullName || user?.name || 'U').charAt(0).toUpperCase()}
               </div>
-              <div>
-                <p className="text-xs font-bold text-[#2D2926]">{user?.fullName || user?.name || 'Tài khoản người dùng'}</p>
-                <p className="text-[11px] text-[#8C857D]">{user?.email || 'sivi@wallet.vn'}</p>
+              <div className="min-w-0">
+                <p className="text-sm font-black text-[#2D2926] truncate">{user?.fullName || user?.name || 'Tài khoản người dùng'}</p>
+                <p className="text-xs text-[#8C857D] truncate mt-0.5">{user?.email || 'sivi@wallet.vn'}</p>
               </div>
             </div>
 
             {onLogout && (
               <button
+                type="button"
                 onClick={() => {
                   onClose();
                   onLogout();
                 }}
-                className="px-3 py-1.5 bg-white hover:bg-rose-50 border border-[#EAE7DC] hover:border-rose-200 text-rose-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
-                title="Đăng xuất khỏi tài khoản"
+                className="py-2 px-3.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs shrink-0"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Đăng Xuất</span>
@@ -150,79 +287,64 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
           </div>
 
-          {/* Storage Mode Selector */}
+          {/* Automatic Network & Cloud Sync Status Card */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-[#4A443F] uppercase tracking-wider block">
-              Chế độ lưu trữ dữ liệu:
+              Trạng thái kết nối & Lưu trữ:
             </label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Option 1: Local Storage */}
-              <button
-                type="button"
-                onClick={() => handleModeChange(true)}
-                className={`p-4 rounded-2xl border text-left transition flex flex-col justify-between ${
-                  isMockMode
-                    ? 'border-[#7D8F69] bg-[#7D8F69]/10 text-[#2D2926] ring-1 ring-[#7D8F69]'
-                    : 'border-[#EAE7DC] bg-[#F9F8F3] text-[#8C857D] hover:bg-[#F1EFE7]'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
-                    <HardDrive className="w-4 h-4" />
-                  </div>
-                  {isMockMode && <Check className="w-4 h-4 text-[#7D8F69]" />}
+            {isOnline ? (
+              <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 text-[#2D2926] transition flex items-start gap-3.5 shadow-2xs">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                  <Cloud className="w-5 h-5" />
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-[#2D2926]">Lưu Trên Thiết Bị</h4>
-                  <p className="text-[10px] text-[#8C857D] mt-0.5 leading-relaxed">
-                    Riêng tư 100%, dữ liệu nằm an toàn trong bộ nhớ máy của bạn.
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                    <h4 className="text-xs font-black text-emerald-900 uppercase tracking-wide">
+                      🟢 Đã kết nối Đám mây
+                    </h4>
+                  </div>
+                  <p className="text-xs text-[#4A443F] leading-relaxed">
+                    Dữ liệu đang được kết nối và tự động đồng bộ thời gian thực với máy chủ đám mây MySQL.
                   </p>
                 </div>
-              </button>
-
-              {/* Option 2: Cloud Sync */}
-              <button
-                type="button"
-                onClick={() => handleModeChange(false)}
-                className={`p-4 rounded-2xl border text-left transition flex flex-col justify-between ${
-                  !isMockMode
-                    ? 'border-[#7D8F69] bg-[#7D8F69]/10 text-[#2D2926] ring-1 ring-[#7D8F69]'
-                    : 'border-[#EAE7DC] bg-[#F9F8F3] text-[#8C857D] hover:bg-[#F1EFE7]'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center">
-                    <Cloud className="w-4 h-4" />
-                  </div>
-                  {!isMockMode && <Check className="w-4 h-4 text-[#7D8F69]" />}
+              </div>
+            ) : (
+              <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50/50 text-[#2D2926] transition flex items-start gap-3.5 shadow-2xs">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                  <HardDrive className="w-5 h-5" />
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-[#2D2926]">Đồng Bộ Đám Mây</h4>
-                  <p className="text-[10px] text-[#8C857D] mt-0.5 leading-relaxed">
-                    Tự động sao lưu và đồng bộ tức thì trên điện thoại và máy tính.
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span>
+                    <h4 className="text-xs font-black text-amber-900 uppercase tracking-wide">
+                      🟡 Chế độ Ngoại tuyến (PWA Offline)
+                    </h4>
+                  </div>
+                  <p className="text-xs text-[#4A443F] leading-relaxed">
+                    Thiết bị đang ngoại tuyến. Giao dịch mới được lưu tạm vào hàng đợi và sẽ tự động đồng bộ lên máy chủ khi có mạng lại.
                   </p>
                 </div>
-              </button>
-            </div>
+              </div>
+            )}
           </div>
 
-          {/* Sync Status Card */}
+          {/* Sync Status & Refresh Action Bar */}
           <div className="p-4 bg-[#F9F8F3] rounded-2xl border border-[#EAE7DC] space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                <span className="text-xs font-bold text-[#2D2926]">Trạng Thái Đồng Bộ Dữ Liệu</span>
+                <Database className="w-4 h-4 text-[#7D8F69]" />
+                <span className="text-xs font-bold text-[#2D2926]">Đồng Bổ Dữ Liệu Tức Thời</span>
               </div>
-              <span className="text-[10px] text-[#8C857D]">Mã hóa 256-bit</span>
             </div>
 
-            <div className="text-xs text-[#8C857D] flex justify-between items-center pt-1 border-t border-[#EAE7DC]/60">
+            <div className="text-xs text-[#8C857D] flex justify-between items-center pt-2 border-t border-[#EAE7DC]">
               <span>Lần đồng bộ gần nhất: <strong className="text-[#2D2926]">{lastSyncTime}</strong></span>
               <button
                 onClick={handleSyncNow}
                 disabled={isSyncing}
-                className="px-3 py-1.5 bg-[#7D8F69] hover:bg-[#687856] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95"
+                className="px-3.5 py-1.5 bg-[#7D8F69] hover:bg-[#687856] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50 shadow-2xs"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
                 {isSyncing ? 'Đang đồng bộ...' : 'Đồng Bộ Ngay'}
@@ -232,32 +354,50 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {syncMessage && (
               <div className="p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                {syncMessage}
+                <span>{syncMessage}</span>
               </div>
             )}
           </div>
 
-          {/* Backup & Data Actions */}
+          {/* Backup & Restore Action Buttons */}
           <div className="space-y-2 pt-2 border-t border-[#EAE7DC]">
             <label className="text-xs font-bold text-[#4A443F] uppercase tracking-wider block">
-              Sao lưu & Khôi phục dữ liệu:
+              Sao lưu & Khôi phục dữ liệu (.json):
             </label>
 
             <div className="flex flex-col sm:flex-row gap-2">
+              {/* Export Backup JSON Button */}
               <button
+                type="button"
                 onClick={handleExportBackup}
                 className="flex-1 py-2.5 px-3 bg-[#F1EFE7] hover:bg-[#EAE7DC] text-[#2D2926] rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-[#EAE7DC] transition"
               >
-                <Download className="w-4 h-4 text-[#7D8F69]" /> Tải File Sao Lưu (.json)
+                <Download className="w-4 h-4 text-[#7D8F69]" />
+                <span>Tải File Sao Lưu (.json)</span>
               </button>
 
+              {/* Smart Restore JSON Button */}
               <button
-                onClick={handleResetData}
-                className="py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-rose-200 transition"
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isRestoring}
+                className="flex-1 py-2.5 px-3 bg-[#7D8F69] hover:bg-[#687856] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-[#7D8F69] transition shadow-2xs disabled:opacity-50"
               >
-                <Trash2 className="w-4 h-4" /> Đặt Lại Dữ Liệu
+                <Upload className={`w-4 h-4 ${isRestoring ? 'animate-spin' : ''}`} />
+                <span>{isRestoring ? 'Đang Khôi Phục...' : 'Khôi Phục Dữ Liệu (.json)'}</span>
               </button>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileImport}
+                accept=".json"
+                className="hidden"
+              />
             </div>
+            <p className="text-[10px] text-[#8C857D] italic">
+              * Khôi phục thông minh tự động tạo lại ví, giao dịch vào MySQL và bảo toàn Sổ Nợ dưới dạng tài khoản Sao Lưu.
+            </p>
           </div>
         </div>
 

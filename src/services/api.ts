@@ -750,16 +750,56 @@ const transactionsModule = {
       createdAt: transactionDate,
     };
 
+    // If offline, save to offline queue & local storage for Optimistic UI
+    if (!navigator.onLine) {
+      const queue = apiClient.getFromStorage<any[]>('sivi_offline_queue') || [];
+      queue.push(txData);
+      apiClient.setToStorage('sivi_offline_queue', queue);
+
+      const wallets = apiClient.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
+      const targetWallet = wallets.find((w) => w.id === txData.walletId);
+      if (targetWallet) {
+        if (txData.type === 'EXPENSE') targetWallet.balance -= txData.amount;
+        else if (txData.type === 'INCOME' || txData.type === 'SETTLEMENT') targetWallet.balance += txData.amount;
+        apiClient.setToStorage(STORAGE_KEYS.WALLETS, wallets);
+      }
+
+      const transactions = apiClient.getFromStorage<Transaction[]>(STORAGE_KEYS.TRANSACTIONS) || INITIAL_TRANSACTIONS;
+      const updated = [newTx, ...transactions];
+      apiClient.setToStorage(STORAGE_KEYS.TRANSACTIONS, updated);
+      return newTx;
+    }
+
     if (!apiClient.getIsMockMode()) {
-      const payload = {
-        ...txData,
-        transactionDate,
-        date: transactionDate,
-      };
-      return await apiClient.request<Transaction>('/transactions', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
+      try {
+        const payload = {
+          ...txData,
+          transactionDate,
+          date: transactionDate,
+        };
+        return await apiClient.request<Transaction>('/transactions', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      } catch (err) {
+        // Fallback to offline queue if network fails
+        const queue = apiClient.getFromStorage<any[]>('sivi_offline_queue') || [];
+        queue.push(txData);
+        apiClient.setToStorage('sivi_offline_queue', queue);
+
+        const wallets = apiClient.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
+        const targetWallet = wallets.find((w) => w.id === txData.walletId);
+        if (targetWallet) {
+          if (txData.type === 'EXPENSE') targetWallet.balance -= txData.amount;
+          else if (txData.type === 'INCOME' || txData.type === 'SETTLEMENT') targetWallet.balance += txData.amount;
+          apiClient.setToStorage(STORAGE_KEYS.WALLETS, wallets);
+        }
+
+        const transactions = apiClient.getFromStorage<Transaction[]>(STORAGE_KEYS.TRANSACTIONS) || INITIAL_TRANSACTIONS;
+        const updated = [newTx, ...transactions];
+        apiClient.setToStorage(STORAGE_KEYS.TRANSACTIONS, updated);
+        return newTx;
+      }
     }
 
     const wallets = apiClient.getFromStorage<Wallet[]>(STORAGE_KEYS.WALLETS) || INITIAL_WALLETS;
