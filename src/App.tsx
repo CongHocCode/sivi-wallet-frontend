@@ -290,10 +290,10 @@ export default function App() {
       const walletList = Array.isArray(walletsRes)
         ? walletsRes
         : Array.isArray((walletsRes as any)?.wallets)
-        ? (walletsRes as any).wallets
-        : Array.isArray((walletsRes as any)?.data)
-        ? (walletsRes as any).data
-        : [];
+          ? (walletsRes as any).wallets
+          : Array.isArray((walletsRes as any)?.data)
+            ? (walletsRes as any).data
+            : [];
 
       setWallets(walletList);
 
@@ -305,50 +305,50 @@ export default function App() {
       const categoryList = Array.isArray(categoriesRes)
         ? categoriesRes
         : Array.isArray((categoriesRes as any)?.categories)
-        ? (categoriesRes as any).categories
-        : Array.isArray((categoriesRes as any)?.data)
-        ? (categoriesRes as any).data
-        : [];
+          ? (categoriesRes as any).categories
+          : Array.isArray((categoriesRes as any)?.data)
+            ? (categoriesRes as any).data
+            : [];
       setCategories(categoryList);
 
       // Unpack transactions
       const transactionList = Array.isArray(transactionsRes)
         ? transactionsRes
         : Array.isArray((transactionsRes as any)?.transactions)
-        ? (transactionsRes as any).transactions
-        : Array.isArray((transactionsRes as any)?.data)
-        ? (transactionsRes as any).data
-        : [];
+          ? (transactionsRes as any).transactions
+          : Array.isArray((transactionsRes as any)?.data)
+            ? (transactionsRes as any).data
+            : [];
       setTransactions(transactionList);
 
       // Unpack groups
       const groupList = Array.isArray(groupsRes)
         ? groupsRes
         : Array.isArray((groupsRes as any)?.groups)
-        ? (groupsRes as any).groups
-        : Array.isArray((groupsRes as any)?.data)
-        ? (groupsRes as any).data
-        : [];
+          ? (groupsRes as any).groups
+          : Array.isArray((groupsRes as any)?.data)
+            ? (groupsRes as any).data
+            : [];
       setGroups(groupList);
 
       // Unpack bills
       const billList = Array.isArray(billsRes)
         ? billsRes
         : Array.isArray((billsRes as any)?.bills)
-        ? (billsRes as any).bills
-        : Array.isArray((billsRes as any)?.data)
-        ? (billsRes as any).data
-        : [];
+          ? (billsRes as any).bills
+          : Array.isArray((billsRes as any)?.data)
+            ? (billsRes as any).data
+            : [];
       setBills(billList);
 
       // Unpack debts into both debtLedger and debts
       const debtList = Array.isArray(debtsRes)
         ? debtsRes
         : Array.isArray((debtsRes as any)?.debts)
-        ? (debtsRes as any).debts
-        : Array.isArray((debtsRes as any)?.data)
-        ? (debtsRes as any).data
-        : [];
+          ? (debtsRes as any).debts
+          : Array.isArray((debtsRes as any)?.data)
+            ? (debtsRes as any).data
+            : [];
 
       setDebts(debtList);
       const calculatedDebtLedger = {
@@ -383,17 +383,20 @@ export default function App() {
   // Keep loadAppData as alias to loadRealData
   const loadAppData = loadRealData;
 
+  let isSyncing = false;
   // Synchronize Offline Queue to Backend
   const syncOfflineQueue = async () => {
+    if (isSyncing || !navigator.onLine) return;
+    isSyncing = true;
     try {
       const rawQueue = localStorage.getItem('sivi_offline_queue');
       if (!rawQueue) return;
       const queue = JSON.parse(rawQueue);
       if (!Array.isArray(queue) || queue.length === 0) return;
-
+      isSyncing = true;
       const queueLength = queue.length;
       console.log('Synchronizing offline transactions queue:', queueLength);
-      
+
       let syncedCount = 0;
       for (const txDto of queue) {
         try {
@@ -412,6 +415,8 @@ export default function App() {
       }
     } catch (err) {
       console.error('Error in syncOfflineQueue:', err);
+    } finally {
+      isSyncing = false;
     }
   };
 
@@ -626,22 +631,20 @@ export default function App() {
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setActiveTab('wallets')}
-            className={`p-2 rounded-xl border transition ${
-              activeTab === 'wallets'
+            className={`p-2 rounded-xl border transition ${activeTab === 'wallets'
                 ? 'bg-[#7D8F69] text-white border-[#7D8F69]'
                 : 'bg-[#F9F8F3] text-[#8C857D] hover:text-[#2D2926] border-[#EAE7DC]'
-            }`}
+              }`}
             title="Ví của tôi"
           >
             <WalletIcon className="w-4 h-4" />
           </button>
           <button
             onClick={() => setActiveTab('groups')}
-            className={`p-2 rounded-xl border transition ${
-              activeTab === 'groups'
+            className={`p-2 rounded-xl border transition ${activeTab === 'groups'
                 ? 'bg-[#7D8F69] text-white border-[#7D8F69]'
                 : 'bg-[#F9F8F3] text-[#8C857D] hover:text-[#2D2926] border-[#EAE7DC]'
-            }`}
+              }`}
             title="Nhóm chi tiêu"
           >
             <Users className="w-4 h-4" />
@@ -690,22 +693,20 @@ export default function App() {
         <nav className="flex-1 space-y-2">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'overview'
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === 'overview'
                 ? 'bg-[#F1EFE7] text-[#7D8F69]'
                 : 'text-[#8C857D] hover:bg-[#F9F8F3] hover:text-[#2D2926]'
-            }`}
+              }`}
           >
             <LayoutDashboard className="w-5 h-5" /> Tổng quan
           </button>
 
           <button
             onClick={() => setActiveTab('transactions')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'transactions' || activeTab === 'debts'
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === 'transactions' || activeTab === 'debts'
                 ? 'bg-[#F1EFE7] text-[#7D8F69]'
                 : 'text-[#8C857D] hover:bg-[#F9F8F3] hover:text-[#2D2926]'
-            }`}
+              }`}
           >
             <ReceiptText className="w-5 h-5 text-[#7D8F69]" />
             <span>Sổ Thu Chi & Nợ</span>
@@ -713,44 +714,40 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'analytics'
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === 'analytics'
                 ? 'bg-[#F1EFE7] text-[#7D8F69]'
                 : 'text-[#8C857D] hover:bg-[#F9F8F3] hover:text-[#2D2926]'
-            }`}
+              }`}
           >
             <PieChartIcon className="w-5 h-5" /> Báo cáo & Thống kê
           </button>
 
           <button
             onClick={() => setActiveTab('coach')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'coach'
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === 'coach'
                 ? 'bg-[#F1EFE7] text-[#7D8F69]'
                 : 'text-[#8C857D] hover:bg-[#F9F8F3] hover:text-[#2D2926]'
-            }`}
+              }`}
           >
             <Sparkles className="w-5 h-5 text-amber-500" /> Cố vấn Sivi AI 🔥
           </button>
 
           <button
             onClick={() => setActiveTab('wallets')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'wallets'
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === 'wallets'
                 ? 'bg-[#F1EFE7] text-[#7D8F69]'
                 : 'text-[#8C857D] hover:bg-[#F9F8F3] hover:text-[#2D2926]'
-            }`}
+              }`}
           >
             <WalletIcon className="w-5 h-5" /> Ví của tôi ({wallets.length})
           </button>
 
           <button
             onClick={() => setActiveTab('groups')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'groups'
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${activeTab === 'groups'
                 ? 'bg-[#F1EFE7] text-[#7D8F69]'
                 : 'text-[#8C857D] hover:bg-[#F9F8F3] hover:text-[#2D2926]'
-            }`}
+              }`}
           >
             <Users className="w-5 h-5" /> Nhóm chi tiêu ({groups.length})
           </button>
@@ -864,19 +861,17 @@ export default function App() {
                     </div>
                     <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
                       <div
-                        className={`h-full transition-all duration-500 ${
-                          monthlyIncome > 0 && monthlyExpense / monthlyIncome > 1
+                        className={`h-full transition-all duration-500 ${monthlyIncome > 0 && monthlyExpense / monthlyIncome > 1
                             ? 'bg-rose-300'
                             : monthlyIncome > 0 && monthlyExpense / monthlyIncome > 0.7
-                            ? 'bg-amber-300'
-                            : 'bg-emerald-200'
-                        }`}
+                              ? 'bg-amber-300'
+                              : 'bg-emerald-200'
+                          }`}
                         style={{
-                          width: `${
-                            monthlyIncome > 0
+                          width: `${monthlyIncome > 0
                               ? Math.min((monthlyExpense / monthlyIncome) * 100, 100)
                               : 0
-                          }%`,
+                            }%`,
                         }}
                       ></div>
                     </div>
@@ -884,8 +879,8 @@ export default function App() {
                       {monthlyIncome > 0 && monthlyExpense / monthlyIncome <= 0.7
                         ? 'An toàn: Chi tiêu dưới 70% thu nhập.'
                         : monthlyIncome > 0 && monthlyExpense / monthlyIncome <= 1
-                        ? 'Cảnh báo: Chi tiêu tiệm cận thu nhập.'
-                        : 'Báo động: Chi tiêu đã vượt thu nhập!'}
+                          ? 'Cảnh báo: Chi tiêu tiệm cận thu nhập.'
+                          : 'Báo động: Chi tiêu đã vượt thu nhập!'}
                     </p>
                   </div>
                 </div>
@@ -945,41 +940,36 @@ export default function App() {
                   <div className="grid grid-cols-5 sm:flex items-center gap-1 p-1 bg-[#F9F8F3] rounded-xl border border-[#EAE7DC] w-full sm:w-auto">
                     <button
                       onClick={() => setTxFilter('ALL')}
-                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${
-                        txFilter === 'ALL' ? 'bg-white text-[#2D2926] shadow-2xs' : 'text-[#8C857D]'
-                      }`}
+                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${txFilter === 'ALL' ? 'bg-white text-[#2D2926] shadow-2xs' : 'text-[#8C857D]'
+                        }`}
                     >
                       Tất cả
                     </button>
                     <button
                       onClick={() => setTxFilter('EXPENSE')}
-                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${
-                        txFilter === 'EXPENSE' ? 'bg-white text-[#D98B72] shadow-2xs' : 'text-[#8C857D]'
-                      }`}
+                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${txFilter === 'EXPENSE' ? 'bg-white text-[#D98B72] shadow-2xs' : 'text-[#8C857D]'
+                        }`}
                     >
                       Chi tiêu
                     </button>
                     <button
                       onClick={() => setTxFilter('INCOME')}
-                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${
-                        txFilter === 'INCOME' ? 'bg-white text-[#7D8F69] shadow-2xs' : 'text-[#8C857D]'
-                      }`}
+                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${txFilter === 'INCOME' ? 'bg-white text-[#7D8F69] shadow-2xs' : 'text-[#8C857D]'
+                        }`}
                     >
                       Thu nhập
                     </button>
                     <button
                       onClick={() => setTxFilter('TRANSFER')}
-                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${
-                        txFilter === 'TRANSFER' ? 'bg-white text-blue-600 shadow-2xs' : 'text-[#8C857D]'
-                      }`}
+                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${txFilter === 'TRANSFER' ? 'bg-white text-blue-600 shadow-2xs' : 'text-[#8C857D]'
+                        }`}
                     >
                       Chuyển ví
                     </button>
                     <button
                       onClick={() => setTxFilter('SETTLEMENT')}
-                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${
-                        txFilter === 'SETTLEMENT' ? 'bg-white text-emerald-600 shadow-2xs' : 'text-[#8C857D]'
-                      }`}
+                      className={`text-center px-1 sm:px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg truncate transition ${txFilter === 'SETTLEMENT' ? 'bg-white text-emerald-600 shadow-2xs' : 'text-[#8C857D]'
+                        }`}
                     >
                       Tất toán
                     </button>
@@ -1056,13 +1046,12 @@ export default function App() {
                       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                         <div className="text-right">
                           <p
-                            className={`font-black text-xs sm:text-sm ${
-                              tx.type === 'EXPENSE'
+                            className={`font-black text-xs sm:text-sm ${tx.type === 'EXPENSE'
                                 ? 'text-[#D98B72]'
                                 : tx.type === 'INCOME' || tx.type === 'SETTLEMENT'
-                                ? 'text-[#7D8F69]'
-                                : 'text-blue-600'
-                            }`}
+                                  ? 'text-[#7D8F69]'
+                                  : 'text-blue-600'
+                              }`}
                           >
                             {tx.type === 'EXPENSE' ? '-' : tx.type === 'INCOME' || tx.type === 'SETTLEMENT' ? '+' : '↔'} {formatVND(tx.amount)}
                           </p>
@@ -1265,9 +1254,8 @@ export default function App() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#EAE7DC] px-2 py-2 flex items-center justify-around shadow-lg">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 ${
-            activeTab === 'overview' ? 'text-[#7D8F69] font-bold' : 'text-[#8C857D]'
-          }`}
+          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 ${activeTab === 'overview' ? 'text-[#7D8F69] font-bold' : 'text-[#8C857D]'
+            }`}
         >
           <LayoutDashboard className="w-5 h-5" />
           <span className="text-[10px]">Tổng quan</span>
@@ -1275,11 +1263,10 @@ export default function App() {
 
         <button
           onClick={() => setActiveTab('transactions')}
-          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 ${
-            activeTab === 'transactions' || activeTab === 'debts'
+          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 ${activeTab === 'transactions' || activeTab === 'debts'
               ? 'text-[#7D8F69] font-bold'
               : 'text-[#8C857D]'
-          }`}
+            }`}
         >
           <ReceiptText className="w-5 h-5" />
           <span className="text-[10px]">Sổ Thu & Nợ</span>
@@ -1298,9 +1285,8 @@ export default function App() {
 
         <button
           onClick={() => setActiveTab('analytics')}
-          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 ${
-            activeTab === 'analytics' ? 'text-[#7D8F69] font-bold' : 'text-[#8C857D]'
-          }`}
+          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 ${activeTab === 'analytics' ? 'text-[#7D8F69] font-bold' : 'text-[#8C857D]'
+            }`}
         >
           <PieChartIcon className="w-5 h-5" />
           <span className="text-[10px]">Báo cáo</span>
@@ -1308,9 +1294,8 @@ export default function App() {
 
         <button
           onClick={() => setActiveTab('coach')}
-          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 ${
-            activeTab === 'coach' ? 'text-amber-600 font-bold' : 'text-[#8C857D]'
-          }`}
+          className={`flex flex-col items-center gap-1 p-1 text-center transition flex-1 ${activeTab === 'coach' ? 'text-amber-600 font-bold' : 'text-[#8C857D]'
+            }`}
         >
           <Sparkles className="w-5 h-5 text-amber-500" />
           <span className="text-[10px]">Cố vấn AI</span>
