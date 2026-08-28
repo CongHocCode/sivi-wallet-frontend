@@ -63,6 +63,8 @@ export interface Transaction {
   type: TransactionType;
   note: string;
   date: string; // ISO format string
+  transactionDate?: string;
+  isOffline?: boolean;
   destinationWalletId?: string;
   destinationWalletName?: string;
   groupId?: string;
@@ -133,6 +135,9 @@ export interface GroupBill {
   category?: string;
   note?: string;
 }
+
+export type BillResponse = GroupBill;
+export type CreateBillRequest = any;
 
 export interface DebtSummary {
   debtorId?: string;

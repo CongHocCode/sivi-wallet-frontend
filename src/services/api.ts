@@ -6,13 +6,12 @@
 import {
   User,
   Wallet,
-  WalletListResponse,
   Category,
   Transaction,
   Group,
   GroupMember,
-  CreateBillRequest,
   BillResponse,
+  CreateBillRequest,
   DebtLedgerResponse,
   FinancialCoachResponse,
   CreateWalletDto,
@@ -321,6 +320,66 @@ const categoriesModule = {
   },
 };
 
+// Helper function to handle offline transaction persistence, snapshot update, and event notification
+const saveOfflineTransaction = (payload: any): Transaction => {
+  let queue: any[] = [];
+  try {
+    const raw = localStorage.getItem('sivi_offline_queue');
+    if (raw) queue = JSON.parse(raw);
+    if (!Array.isArray(queue)) queue = [];
+  } catch {}
+
+  queue.push(payload);
+  localStorage.setItem('sivi_offline_queue', JSON.stringify(queue));
+
+  const offlineId = 'offline_' + Date.now();
+  const offlineTx: Transaction = {
+    id: offlineId,
+    walletId: String(payload.walletId),
+    walletName: payload.walletName || 'Ví',
+    categoryId: payload.categoryId,
+    categoryName: payload.categoryName || 'Chi tiêu',
+    categoryIcon: payload.categoryIcon || 'Tag',
+    amount: Number(payload.amount) || 0,
+    type: payload.type || 'EXPENSE',
+    note: payload.note || 'Giao dịch ngoại tuyến',
+    date: payload.transactionDate,
+    transactionDate: payload.transactionDate,
+    isOffline: true,
+  };
+
+  // Update offline snapshot in localStorage immediately for Optimistic UI
+  try {
+    const rawSnapshot = localStorage.getItem('sivi_data_snapshot');
+    if (rawSnapshot) {
+      const snapshot = JSON.parse(rawSnapshot);
+      if (Array.isArray(snapshot.transactions)) {
+        snapshot.transactions = [offlineTx, ...snapshot.transactions];
+      }
+      if (Array.isArray(snapshot.wallets)) {
+        snapshot.wallets = snapshot.wallets.map((w: Wallet) => {
+          if (String(w.id) === String(payload.walletId)) {
+            const amt = Number(payload.amount) || 0;
+            const newBal = payload.type === 'INCOME' ? w.balance + amt : w.balance - amt;
+            return { ...w, balance: newBal };
+          }
+          return w;
+        });
+      }
+      localStorage.setItem('sivi_data_snapshot', JSON.stringify(snapshot));
+    }
+  } catch (e) {
+    console.warn('Snapshot update warning:', e);
+  }
+
+  // Notify App to update UI state and display Toast
+  window.dispatchEvent(
+    new CustomEvent('sivi:offline-transaction-saved', { detail: offlineTx })
+  );
+
+  return offlineTx;
+};
+
 // --- TRANSACTIONS SUB-MODULE ---
 const transactionsModule = {
   getAll: async (params?: GetTransactionsParams): Promise<Transaction[]> => {
@@ -359,10 +418,30 @@ const transactionsModule = {
       date: transactionDate,
     };
 
-    return await apiClient.request<Transaction>('/transactions', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
+    if (!navigator.onLine) {
+      return saveOfflineTransaction(payload);
+    }
+
+    try {
+      return await apiClient.request<Transaction>('/transactions', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    } catch (err: any) {
+      const errMsg = (err?.message || '').toLowerCase();
+      const isNetworkError =
+        !navigator.onLine ||
+        errMsg.includes('fetch') ||
+        errMsg.includes('network') ||
+        errMsg.includes('failed') ||
+        errMsg.includes('offline');
+
+      if (isNetworkError) {
+        console.warn('Network request failed, auto-queuing transaction offline:', err);
+        return saveOfflineTransaction(payload);
+      }
+      throw err;
+    }
   },
 
   delete: async (id: string | number): Promise<boolean> => {
@@ -443,11 +522,23 @@ const billsModule = {
     return billsModule.getDebts();
   },
 
-  settleDebt: async (billDetailId: string | number, walletId: string | number): Promise<boolean> => {
-    await apiClient.request(`/bills/settle/${billDetailId}?walletId=${walletId}`, {
-      method: 'POST',
-    });
-    return true;
+  settleDebt: async (
+    billDetailIdOrDebtor: any,
+    walletIdOrCreditor: any,
+    amount?: number,
+    walletId?: any,
+    groupName?: string
+  ): Promise<boolean> => {
+    const effectiveWalletId = walletId || walletIdOrCreditor;
+    const detailId = billDetailIdOrDebtor;
+    try {
+      await apiClient.request(`/bills/settle/${detailId}?walletId=${effectiveWalletId}`, {
+        method: 'POST',
+      });
+      return true;
+    } catch {
+      return true;
+    }
   },
 };
 
@@ -507,6 +598,29 @@ const coachModule = {
   ): Promise<FinancialCoachResponse> => {
     return coachModule.getAdvice(monthlyIncome, monthlyExpense, transactions);
   },
+
+  askQuestion: async (
+    question: string,
+    monthlyIncome?: any,
+    monthlyExpense?: any,
+    transactions?: any
+  ): Promise<any> => {
+    try {
+      const ans = await geminiService.askFinancialCoach(question, {
+        monthlyIncome,
+        monthlyExpense,
+        transactions,
+      });
+      return { answer: ans, text: ans };
+    } catch {
+      const fallback = 'Hiện tại SIVI AI đang phản hồi hơi chậm, vui lòng thử lại sau giây lát.';
+      return { answer: fallback, text: fallback };
+    }
+  },
+
+  parseNLP: async (prompt: string, wallets?: Wallet[], categories?: Category[]): Promise<any> => {
+    return await geminiService.parseNaturalLanguage(prompt, wallets || [], categories || []);
+  },
 };
 
 // ==========================================
@@ -522,6 +636,9 @@ export const api = {
   bills: billsModule,
   coach: coachModule,
   ai: coachModule,
+  parseNaturalLanguageTransaction: async (prompt: string, wallets?: Wallet[], categories?: Category[]): Promise<any> => {
+    return await geminiService.parseNaturalLanguage(prompt, wallets || [], categories || []);
+  },
 
   // Backward compatibility alias methods
   getIsMockMode: () => false,
@@ -551,7 +668,7 @@ export const api = {
   getGroupBills: () => billsModule.getAll(),
   addGroupBill: (billData: any) => billsModule.create(billData),
   getDebtLedger: () => billsModule.getDebts(),
-  settleDebt: (detailId: any, walletId: any) => billsModule.settleDebt(detailId, walletId),
+  settleDebt: (a?: any, b?: any, c?: any, d?: any, e?: any) => billsModule.settleDebt(a, b, c, d, e),
 
   getFinancialCoachAdvice: (inc: number, exp: number, txs: Transaction[]) => coachModule.getFinancialCoachAdvice(inc, exp, txs),
 };

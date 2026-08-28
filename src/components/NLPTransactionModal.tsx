@@ -155,46 +155,83 @@ export const NLPTransactionModal: React.FC<NLPTransactionModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Web Speech API Voice Recognition
-  const toggleVoiceRecording = () => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      alert('Trình duyệt của bạn chưa hỗ trợ thu âm trực tiếp Web Speech API. Vui lòng gõ chữ bên dưới.');
-      return;
-    }
+  // Web Speech API Voice Recognition with Mobile Safe Fallback & Error Handling
+  const toggleVoiceRecording = async () => {
+    setError(null);
 
     if (isRecording) {
       setIsRecording(false);
       return;
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'vi-VN';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-    recognition.onstart = () => {
-      setIsRecording(true);
-    };
+    if (!SpeechRecognition) {
+      setError('Trình duyệt của bạn chưa hỗ trợ Web Speech API trực tiếp. Bạn vui lòng gõ câu chi tiêu vào ô bên dưới.');
+      return;
+    }
 
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setPrompt(transcript);
+    // Attempt microphone permission check on mobile devices safely
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Stop check stream immediately so SpeechRecognition can acquire the audio device
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (err: any) {
+        console.warn('Microphone permission denied or unsupported context:', err);
+        setError('Trình duyệt di động bị chặn quyền Micro (cần kết nối HTTPS hoặc cấp quyền micro trong cài đặt trang web). Bạn có thể gõ trực tiếp câu chi tiêu vào ô bên dưới.');
+        setIsRecording(false);
+        return;
+      }
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'vi-VN';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.continuous = false;
+
+      recognition.onstart = () => {
+        setIsRecording(true);
+        setError(null);
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0]?.[0]?.transcript;
+        if (transcript) {
+          setPrompt(transcript);
+          setIsRecording(false);
+          processNLP(transcript);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('SpeechRecognition error:', event.error);
+        setIsRecording(false);
+        const errType = event.error;
+        if (errType === 'not-allowed' || errType === 'service-not-allowed' || errType === 'permission-denied') {
+          setError('Trình duyệt di động đã chặn quyền truy cập Micro. Bạn có thể gõ trực tiếp câu chi tiêu vào ô bên dưới.');
+        } else if (errType === 'no-speech') {
+          setError('Chưa nghe thấy giọng nói. Vui lòng nhấn nút Micro và thử nói lại.');
+        } else if (errType === 'network') {
+          setError('Lỗi kết nối mạng khi nhận diện giọng nói. Bạn có thể gõ chữ trực tiếp bên dưới.');
+        } else if (errType !== 'aborted') {
+          setError('Không thể mở thu âm giọng nói. Bạn có thể gõ trực tiếp câu chi tiêu vào ô bên dưới.');
+        }
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+
+      recognition.start();
+    } catch (err: any) {
+      console.error('Failed to start SpeechRecognition:', err);
       setIsRecording(false);
-      processNLP(transcript);
-    };
-
-    recognition.onerror = () => {
-      setIsRecording(false);
-    };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
-
-    recognition.start();
+      setError('Không thể khởi chạy micro trên trình duyệt này. Bạn có thể gõ trực tiếp câu chi tiêu bên dưới.');
+    }
   };
 
   const processNLP = async (inputText: string) => {

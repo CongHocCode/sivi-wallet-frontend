@@ -242,10 +242,36 @@ export default function App() {
     setIsAddTxOpen(true);
   };
 
+  const loadFromSnapshot = () => {
+    try {
+      const rawSnapshot = localStorage.getItem('sivi_data_snapshot');
+      if (rawSnapshot) {
+        const snapshot = JSON.parse(rawSnapshot);
+        if (snapshot.user) setUser(snapshot.user);
+        if (Array.isArray(snapshot.wallets)) setWallets(snapshot.wallets);
+        if (Array.isArray(snapshot.categories)) setCategories(snapshot.categories);
+        if (Array.isArray(snapshot.transactions)) setTransactions(snapshot.transactions);
+        if (Array.isArray(snapshot.groups)) setGroups(snapshot.groups);
+        if (Array.isArray(snapshot.bills)) setBills(snapshot.bills);
+        if (Array.isArray(snapshot.debts)) setDebts(snapshot.debts);
+        if (snapshot.debtLedger) setDebtLedger(snapshot.debtLedger);
+        if (snapshot.totalBalance !== undefined) setTotalBalance(snapshot.totalBalance);
+      }
+    } catch (e) {
+      console.error('Failed to load data snapshot from localStorage:', e);
+    }
+  };
+
   // Reusable loadRealData Function (Fetch real data from Spring Boot backend)
   const loadRealData = async () => {
     setIsLoading(true);
     try {
+      if (!navigator.onLine) {
+        loadFromSnapshot();
+        setIsLoading(false);
+        return;
+      }
+
       const [uData, walletsRes, categoriesRes, transactionsRes, groupsRes, billsRes, debtsRes] = await Promise.all([
         api.auth.getMe().catch(() => null),
         api.wallets.getAll(),
@@ -271,12 +297,9 @@ export default function App() {
 
       setWallets(walletList);
 
-      if ((walletsRes as any)?.totalBalance !== undefined) {
-        setTotalBalance((walletsRes as any).totalBalance);
-      } else {
-        const calculatedTotal = walletList.reduce((sum: number, w: Wallet) => sum + (w?.balance || 0), 0);
-        setTotalBalance(calculatedTotal);
-      }
+      const calculatedTotal = walletList.reduce((sum: number, w: Wallet) => sum + (w?.balance || 0), 0);
+      const finalTotalBalance = (walletsRes as any)?.totalBalance !== undefined ? (walletsRes as any).totalBalance : calculatedTotal;
+      setTotalBalance(finalTotalBalance);
 
       // Unpack categories
       const categoryList = Array.isArray(categoriesRes)
@@ -328,13 +351,30 @@ export default function App() {
         : [];
 
       setDebts(debtList);
-      setDebtLedger({
+      const calculatedDebtLedger = {
         totalYouOwe: (debtsRes as any)?.totalYouOwe || 0,
         totalOwedToYou: (debtsRes as any)?.totalOwedToYou || 0,
         debts: debtList,
-      });
+      };
+      setDebtLedger(calculatedDebtLedger);
+
+      // Save Data Snapshot to LocalStorage
+      const snapshot = {
+        user: uData,
+        wallets: walletList,
+        categories: categoryList,
+        transactions: transactionList,
+        groups: groupList,
+        bills: billList,
+        debts: debtList,
+        debtLedger: calculatedDebtLedger,
+        totalBalance: finalTotalBalance,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem('sivi_data_snapshot', JSON.stringify(snapshot));
     } catch (err) {
-      console.error('Error loading Sivi Wallet real backend data:', err);
+      console.warn('Backend data load error/offline, restoring local snapshot:', err);
+      loadFromSnapshot();
     } finally {
       setIsLoading(false);
     }
@@ -351,10 +391,14 @@ export default function App() {
       const queue = JSON.parse(rawQueue);
       if (!Array.isArray(queue) || queue.length === 0) return;
 
-      console.log('Synchronizing offline transactions queue:', queue.length);
+      const queueLength = queue.length;
+      console.log('Synchronizing offline transactions queue:', queueLength);
+      
+      let syncedCount = 0;
       for (const txDto of queue) {
         try {
           await api.transactions.create(txDto);
+          syncedCount++;
         } catch (err) {
           console.error('Failed to sync queued transaction:', err);
         }
@@ -362,14 +406,16 @@ export default function App() {
 
       localStorage.removeItem('sivi_offline_queue');
       await loadRealData();
-      setToastMessage('🎉 Đồng bộ giao dịch ngoại tuyến lên máy chủ thành công!');
-      setTimeout(() => setToastMessage(null), 4000);
+      if (syncedCount > 0) {
+        setToastMessage(`🎉 Đã tự động đồng bộ ${syncedCount} giao dịch ngoại tuyến lên máy chủ!`);
+        setTimeout(() => setToastMessage(null), 5000);
+      }
     } catch (err) {
       console.error('Error in syncOfflineQueue:', err);
     }
   };
 
-  // Check Auth and Listen to Network Status on Mount
+  // Check Auth and Listen to Network Status & Offline Creation Events
   useEffect(() => {
     const hasToken = localStorage.getItem('sivi_token') || api.auth.isAuthenticated();
     if (hasToken) {
@@ -389,8 +435,30 @@ export default function App() {
       setToastMessage('🟡 Chế độ Ngoại tuyến (Các giao dịch sẽ được lưu vào hàng đợi PWA)');
     };
 
+    const handleOfflineTxSaved = (e: Event) => {
+      const customEvent = e as CustomEvent<Transaction>;
+      const offlineTx = customEvent.detail;
+      if (!offlineTx) return;
+
+      setTransactions((prev) => [offlineTx, ...prev]);
+      setWallets((prevWallets) =>
+        prevWallets.map((w) => {
+          if (String(w.id) === String(offlineTx.walletId)) {
+            const amt = offlineTx.amount;
+            const newBal = offlineTx.type === 'INCOME' ? w.balance + amt : w.balance - amt;
+            return { ...w, balance: newBal };
+          }
+          return w;
+        })
+      );
+
+      setToastMessage('🟡 Đã lưu tạm trên thiết bị (Chế độ Ngoại tuyến)');
+      setTimeout(() => setToastMessage(null), 4000);
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('sivi:offline-transaction-saved', handleOfflineTxSaved);
 
     if (navigator.onLine) {
       syncOfflineQueue();
@@ -399,6 +467,7 @@ export default function App() {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('sivi:offline-transaction-saved', handleOfflineTxSaved);
     };
   }, []);
 

@@ -98,7 +98,7 @@ export const geminiService = {
    * Feature 2: Natural Language Expense Logger (NLP Parser)
    * Parses colloquial Vietnamese text/voice statements into structured financial payloads.
    */
-  async parseNaturalLanguage(text: string) {
+  async parseNaturalLanguage(text: string, _wallets?: any[], _categories?: any[]) {
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
     const currentLocalIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -251,8 +251,13 @@ Hãy đưa ra đúng 2 câu nhận xét cực mặn bằng tiếng Việt, vừa
 
   async askFinancialCoach(
     question: string,
-    summary: { totalIncome: number; totalExpense: number; topCategory: string }
+    contextOrSummary?: any
   ) {
+    const summary = {
+      totalIncome: contextOrSummary?.monthlyIncome || contextOrSummary?.totalIncome || 0,
+      totalExpense: contextOrSummary?.monthlyExpense || contextOrSummary?.totalExpense || 0,
+      topCategory: contextOrSummary?.topCategory || "Chi tiêu chung",
+    };
     try {
       const response = await fetch('/api/gemini/chat-advisor', {
         method: 'POST',
