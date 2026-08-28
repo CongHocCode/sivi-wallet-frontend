@@ -431,26 +431,26 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
       {/* TAB 1: NLP / VOICE ENTRY */}
       {activeTab === 'nlp' && (
         <form onSubmit={handleNlpSubmit} className="space-y-3">
-          <div className="flex items-center gap-2 bg-[#F9F8F3] border border-[#EAE7DC] rounded-2xl p-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-[#F9F8F3] border border-[#EAE7DC] rounded-xl sm:rounded-2xl p-2 sm:p-2.5">
             <button
               type="button"
               onClick={() => onOpenNlpFull && onOpenNlpFull()}
-              className="w-9 h-9 bg-[#7D8F69] text-white rounded-xl flex items-center justify-center shrink-0 hover:bg-[#687856] transition"
+              className="w-8 h-8 sm:w-9 sm:h-9 bg-[#7D8F69] text-white rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 hover:bg-[#687856] transition"
               title="Ghi âm giọng nói"
             >
-              <Mic className="w-4 h-4" />
+              <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
             <input
               type="text"
               value={nlpPrompt}
               onChange={(e) => setNlpPrompt(e.target.value)}
               placeholder='Ví dụ: "Trưa nay ăn cơm tấm 45k trả bằng MoMo với Nam"'
-              className="flex-1 bg-transparent text-xs font-medium text-[#2D2926] outline-none placeholder-[#8C857D]"
+              className="flex-1 min-w-0 bg-transparent text-[11px] sm:text-xs font-medium text-[#2D2926] outline-none placeholder-[#8C857D]"
             />
             <button
               type="submit"
               disabled={isNlpLoading || !nlpPrompt.trim()}
-              className="bg-[#2D2926] hover:bg-[#1a1816] text-white px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 flex items-center gap-1.5 transition shrink-0"
+              className="bg-[#2D2926] hover:bg-[#1a1816] text-white px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold disabled:opacity-50 flex items-center gap-1 sm:gap-1.5 transition shrink-0 whitespace-nowrap"
             >
               {isNlpLoading ? (
                 <Sparkles className="w-3.5 h-3.5 animate-spin text-amber-300" />
