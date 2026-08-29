@@ -108,12 +108,15 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
     setOcrResult(null);
 
     try {
-      // Real Gemini AI multimodal OCR scan
+      // Real Gemini AI multimodal OCR scan with split calculation
       const result = await geminiService.scanReceipt(selectedFile, userNote || undefined);
       const nowLocal = toDateTimeLocalString(new Date());
+      const calculationExplanation = result.note || result.rawNotes || undefined;
+      const parsedTotal = typeof result.totalAmount === 'number' ? result.totalAmount : Number(result.totalAmount) || 0;
+
       const mappedResult: ReceiptOCRResult = {
         merchantName: result.merchantName || 'Cửa hàng không rõ',
-        totalAmount: result.totalAmount || 0,
+        totalAmount: parsedTotal,
         transactionDate: result.transactionDate || nowLocal,
         category: result.category || 'Khác',
         paymentMethod: result.paymentMethod || 'Tiền mặt',
@@ -122,11 +125,13 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
           price: item.price || item.totalPrice || 0,
           quantity: item.quantity || 1,
         })),
-        rawNotes: result.note || undefined,
+        rawNotes: calculationExplanation,
       };
       setOcrResult(mappedResult);
-      if (!userNote && result.note) {
-        setUserNote(result.note);
+
+      // If user had not entered a note or if AI provided calculation explanation, update userNote
+      if (calculationExplanation && (!userNote || userNote.trim() === '')) {
+        setUserNote(calculationExplanation);
       }
 
       // Auto-match wallet from Gemini extracted info, paymentMethod, or note
@@ -429,7 +434,7 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
                         </div>
                         <div className="text-right">
                           <label className="text-[11px] font-bold text-[#8C857D] uppercase tracking-wider block">
-                            Tổng cộng
+                            Tổng cộng {ocrResult.rawNotes && (ocrResult.rawNotes.includes('=') || ocrResult.rawNotes.includes('/') || ocrResult.rawNotes.includes('-')) ? '(Đã tính chia)' : ''}
                           </label>
                           <div className="flex items-center justify-end gap-1">
                             <input
@@ -444,6 +449,11 @@ export const ReceiptOCRModal: React.FC<ReceiptOCRModalProps> = ({
                             />
                             <span className="text-xs font-bold text-[#D98B72]">đ</span>
                           </div>
+                          {ocrResult.rawNotes && (ocrResult.rawNotes.includes('=') || ocrResult.rawNotes.includes('/') || ocrResult.rawNotes.includes('-')) && (
+                            <span className="text-[10px] font-medium text-[#7D8F69] block mt-0.5 max-w-[220px] text-right truncate" title={ocrResult.rawNotes}>
+                              ✦ {ocrResult.rawNotes}
+                            </span>
+                          )}
                         </div>
                       </div>
 
