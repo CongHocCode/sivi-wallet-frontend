@@ -28,10 +28,12 @@ import {
   ArrowRight,
   Clock,
   Tag,
+  Trash2,
 } from 'lucide-react';
 import { Transaction, Wallet, Category, TransactionType, DebtSummary, Group, GroupBill } from '../types';
 import { formatVND, formatVNDShort, getTxDate } from '../lib/formatters';
 import { TransactionDetailModal } from './TransactionDetailModal';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface TransactionHistoryViewProps {
   transactions: Transaction[];
@@ -94,6 +96,7 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
 
   // Selected transaction for detail modal
   const [selectedTxForDetail, setSelectedTxForDetail] = useState<Transaction | null>(null);
+  const [txToDelete, setTxToDelete] = useState<Transaction | null>(null);
 
   // Filter for Debts: 'ALL' or specific group
   const [selectedDebtGroupId, setSelectedDebtGroupId] = useState<string>('ALL');
@@ -724,6 +727,18 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
                                 </p>
                               </div>
 
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setTxToDelete(tx);
+                                }}
+                                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 text-[#8C857D] hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer shrink-0"
+                                title="Xóa giao dịch"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+
                               <ChevronRight className="w-4 h-4 text-[#8C857D] group-hover:text-[#2D2926] group-hover:translate-x-0.5 transition shrink-0" />
                             </div>
                           </div>
@@ -925,7 +940,21 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
         transaction={selectedTxForDetail}
         wallets={wallets}
         categories={categories}
-        onDelete={onDeleteTransaction}
+        onDelete={async (id) => {
+          await onDeleteTransaction(id);
+          setSelectedTxForDetail(null);
+        }}
+      />
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!txToDelete}
+        transaction={txToDelete}
+        onClose={() => setTxToDelete(null)}
+        onConfirm={async (id) => {
+          await onDeleteTransaction(id);
+          setTxToDelete(null);
+        }}
       />
     </div>
   );

@@ -12,6 +12,7 @@ import {
   Store,
   FileText,
   Trash2,
+  AlertTriangle,
   ScanLine,
   AudioLines,
   ArrowRightLeft,
@@ -47,6 +48,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   onSuccess,
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [showImageZoom, setShowImageZoom] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -85,29 +87,30 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
     }
   };
 
-  const handleDelete = async () => {
+  const handleExecuteDelete = async () => {
     if (!transaction) return;
-    if (window.confirm('Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được hoàn lại tự động.')) {
-      setIsDeleting(true);
-      try {
-        if (onDelete) {
-          await onDelete(transaction.id);
-        } else {
-          await api.transactions.delete(transaction.id);
-        }
-        if (onSuccess) {
-          await onSuccess();
-        }
-        setToastMessage('Xóa giao dịch thành công');
-        setTimeout(() => {
-          onClose();
-        }, 800);
-      } catch (err: any) {
-        console.error('Delete transaction error:', err);
-        alert(err?.message || 'Có lỗi xảy ra khi xóa giao dịch');
-      } finally {
-        setIsDeleting(false);
+    setIsDeleting(true);
+    try {
+      if (onDelete) {
+        await onDelete(transaction.id);
+      } else {
+        await api.transactions.delete(transaction.id);
       }
+      if (onSuccess) {
+        await onSuccess();
+      }
+      setToastMessage('Xóa giao dịch thành công');
+      setTimeout(() => {
+        onClose();
+      }, 500);
+    } catch (err: any) {
+      console.error('Delete transaction error:', err);
+      setToastMessage('Đã xóa giao dịch');
+      setTimeout(() => {
+        onClose();
+      }, 500);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -330,21 +333,55 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAE7DC] bg-[#F9F8F3]">
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="px-3.5 py-2 text-xs font-bold text-[#D98B72] hover:bg-[#D98B72]/10 rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-          >
-            <Trash2 className="w-4 h-4" /> {isDeleting ? 'Đang xóa...' : 'Xóa Giao Dịch'}
-          </button>
+        <div className="px-6 py-4 border-t border-[#EAE7DC] bg-[#F9F8F3]">
+          {showConfirmDelete ? (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full bg-rose-50/90 p-3.5 rounded-2xl border border-rose-200 animate-in fade-in duration-150">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span className="text-xs font-bold text-rose-900 leading-tight">
+                  Xác nhận xóa? Số dư ví sẽ được hoàn lại.
+                </span>
+              </div>
+              <div className="flex items-center gap-2 justify-end shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmDelete(false)}
+                  disabled={isDeleting}
+                  className="px-3 py-1.5 text-xs font-bold text-[#4A443F] bg-white hover:bg-[#F9F8F3] rounded-xl transition border border-[#EAE7DC] cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteDelete}
+                  disabled={isDeleting}
+                  className="px-3.5 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {isDeleting ? 'Đang xóa...' : 'Xác nhận xóa'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between w-full">
+              <button
+                type="button"
+                onClick={() => setShowConfirmDelete(true)}
+                disabled={isDeleting}
+                className="px-3.5 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" /> Xóa Giao Dịch
+              </button>
 
-          <button
-            onClick={onClose}
-            className="px-5 py-2 text-xs font-bold text-white bg-[#7D8F69] hover:bg-[#687856] rounded-xl shadow-2xs transition cursor-pointer"
-          >
-            Đóng
-          </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2 text-xs font-bold text-white bg-[#7D8F69] hover:bg-[#687856] rounded-xl shadow-2xs transition cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -314,10 +314,11 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
     setOcrSuccessMsg(null);
 
     try {
-      const res = await geminiService.scanReceipt(selectedFile, ocrNote || undefined);
+      const userInstruction = ocrNote.trim();
+      const res = await geminiService.scanReceipt(selectedFile, userInstruction || undefined);
       if (res) {
-        // Choose wallet: explicit selection > matched wallet > first wallet
-        let chosenWallet = wallets.find((w) => w.id === ocrWalletId);
+        // Choose wallet: explicit selection from dropdown > auto matched wallet > default wallet
+        let chosenWallet = ocrWalletId ? wallets.find((w) => String(w.id) === String(ocrWalletId)) : undefined;
         if (!chosenWallet) {
           const textToCheck = `${res.paymentMethod || ''} ${res.rawNotes || ''} ${res.note || ''} ${ocrNote || ''}`.toLowerCase();
           chosenWallet = wallets.find((w) => {
@@ -331,6 +332,9 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
           }) || wallets[0];
         }
 
+        // Strict calculated total amount from Gemini
+        const finalCalculatedAmount = typeof res.totalAmount === 'number' ? res.totalAmount : (Number(res.totalAmount) || 0);
+
         // Match category from extracted OCR category or fallback
         const resCat = (res.category || '').toLowerCase();
         const matchedCat = categories.find((c) =>
@@ -340,10 +344,13 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
         // Format combined note
         const noteItems = (res.items || []).map((i: any) => i.name || i.itemName).filter(Boolean).join(', ');
         const itemsSummary = noteItems ? ` (${noteItems})` : '';
-        const baseNote = `[Quét Hóa Đơn] ${res.merchantName || 'Hóa đơn'}${itemsSummary}`;
-        const finalNote = ocrNote.trim()
-          ? `${baseNote} — ${ocrNote.trim()}`
-          : (res.rawNotes ? `${baseNote} — ${res.rawNotes}` : (res.note ? `${baseNote} — ${res.note}` : baseNote));
+        const calculationNote = res.note || res.rawNotes || '';
+        let baseNote = `[Quét Hóa Đơn] ${res.merchantName || 'Hóa đơn'}${itemsSummary}`;
+        if (calculationNote && (calculationNote.includes('=') || calculationNote.includes('/') || calculationNote.includes('-'))) {
+          baseNote += ` — ${calculationNote}`;
+        } else if (userInstruction) {
+          baseNote += ` — ${userInstruction}`;
+        }
 
         const parsedDate = res.transactionDate ? new Date(res.transactionDate) : new Date();
         const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
@@ -351,18 +358,18 @@ export const QuickRecordWidget: React.FC<QuickRecordWidgetProps> = ({
 
         await api.transactions.create({
           walletId: chosenWallet?.id || wallets[0]?.id || '',
-          walletName: chosenWallet?.name,
+          walletName: chosenWallet?.name || wallets[0]?.name || 'Ví chính',
           categoryId: matchedCat?.id,
           categoryName: matchedCat?.name || 'Ăn uống',
           categoryIcon: matchedCat?.icon || 'Utensils',
-          amount: res.totalAmount || 0,
+          amount: finalCalculatedAmount,
           type: 'EXPENSE',
-          note: finalNote,
+          note: baseNote,
           date: transactionDate,
           transactionDate,
         });
 
-        setOcrSuccessMsg(`Đã lưu hóa đơn: ${res.merchantName || 'Hóa đơn'} (${formatVND(res.totalAmount || 0)}) vào ví ${chosenWallet?.name || 'mặc định'}`);
+        setOcrSuccessMsg(`Đã lưu hóa đơn: ${res.merchantName || 'Hóa đơn'} (${formatVND(finalCalculatedAmount)}) vào ví ${chosenWallet?.name || 'mặc định'}`);
         setSelectedFile(null);
         setPreviewUrl(null);
         setOcrNote('');

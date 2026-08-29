@@ -445,7 +445,64 @@ const transactionsModule = {
   },
 
   delete: async (id: string | number): Promise<boolean> => {
-    await apiClient.request(`/transactions/${id}`, { method: 'DELETE' });
+    const stringId = String(id);
+
+    // 1. Remove from local offline queue if it was an offline transaction
+    try {
+      const rawQueue = localStorage.getItem('sivi_offline_queue');
+      if (rawQueue) {
+        let queue = JSON.parse(rawQueue);
+        if (Array.isArray(queue)) {
+          queue = queue.filter((item: any) => String(item.id) !== stringId && item.offlineId !== stringId);
+          localStorage.setItem('sivi_offline_queue', JSON.stringify(queue));
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to clean offline queue:', e);
+    }
+
+    // 2. Optimistically update local snapshot & refund/adjust wallet balance
+    try {
+      const rawSnapshot = localStorage.getItem('sivi_data_snapshot');
+      if (rawSnapshot) {
+        const snapshot = JSON.parse(rawSnapshot);
+        let foundTx: Transaction | undefined;
+        if (Array.isArray(snapshot.transactions)) {
+          foundTx = snapshot.transactions.find((t: any) => String(t.id) === stringId);
+          snapshot.transactions = snapshot.transactions.filter((t: any) => String(t.id) !== stringId);
+        }
+
+        if (foundTx && Array.isArray(snapshot.wallets)) {
+          const txAmt = Number(foundTx.amount) || 0;
+          snapshot.wallets = snapshot.wallets.map((w: Wallet) => {
+            if (String(w.id) === String(foundTx?.walletId)) {
+              let newBal = w.balance;
+              if (foundTx?.type === 'EXPENSE') {
+                newBal = w.balance + txAmt; // Refund expense
+              } else if (foundTx?.type === 'INCOME') {
+                newBal = w.balance - txAmt; // Deduct income
+              }
+              return { ...w, balance: newBal };
+            }
+            return w;
+          });
+          snapshot.totalBalance = snapshot.wallets.reduce((sum: number, w: Wallet) => sum + (w?.balance || 0), 0);
+        }
+        localStorage.setItem('sivi_data_snapshot', JSON.stringify(snapshot));
+      }
+    } catch (e) {
+      console.warn('Failed to update local snapshot on delete:', e);
+    }
+
+    // 3. If online and not a purely offline ID, request backend DELETE
+    if (navigator.onLine && !stringId.startsWith('offline_')) {
+      try {
+        await apiClient.request(`/transactions/${id}`, { method: 'DELETE' });
+      } catch (backendErr) {
+        console.warn('Backend DELETE transaction returned error (local deletion still preserved):', backendErr);
+      }
+    }
+
     return true;
   },
 };

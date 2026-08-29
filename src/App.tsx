@@ -79,6 +79,7 @@ import { GroupDetailModal } from './components/GroupDetailModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { TransactionHistoryView } from './components/TransactionHistoryView';
 import { TransactionDetailModal } from './components/TransactionDetailModal';
+import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
 import { GroupsView } from './components/GroupsView';
 import { SiviLogo } from './components/SiviLogo';
 
@@ -229,6 +230,7 @@ export default function App() {
   const [isNlpOpen, setIsNlpOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedTxForDetail, setSelectedTxForDetail] = useState<Transaction | null>(null);
+  const [txToDelete, setTxToDelete] = useState<Transaction | null>(null);
 
   // Quick Open Transaction & Transfer Handlers
   const handleOpenAddTx = (walletId?: string, tab: 'expense' | 'income' | 'transfer' = 'expense') => {
@@ -516,11 +518,40 @@ export default function App() {
 
   // Handlers
   const handleDeleteTransaction = async (id: string) => {
+    // Optimistic UI removal and wallet refund immediately in React state
+    const stringId = String(id);
+    const txToDelete = transactions.find((t) => String(t.id) === stringId);
+
+    setTransactions((prev) => prev.filter((t) => String(t.id) !== stringId));
+
+    if (txToDelete) {
+      const amt = Number(txToDelete.amount) || 0;
+      setWallets((prevWallets) =>
+        prevWallets.map((w) => {
+          if (String(w.id) === String(txToDelete.walletId)) {
+            let newBal = w.balance;
+            if (txToDelete.type === 'EXPENSE') newBal += amt;
+            else if (txToDelete.type === 'INCOME') newBal -= amt;
+            return { ...w, balance: newBal };
+          }
+          return w;
+        })
+      );
+      if (txToDelete.type === 'EXPENSE') {
+        setTotalBalance((prev) => prev + amt);
+      } else if (txToDelete.type === 'INCOME') {
+        setTotalBalance((prev) => prev - amt);
+      }
+    }
+
+    // Clear detail selection if currently open
+    setSelectedTxForDetail((curr) => (curr && String(curr.id) === stringId ? null : curr));
+
     try {
       await api.transactions.delete(id);
       await loadAppData();
     } catch (err) {
-      console.error('Error deleting transaction:', err);
+      console.warn('Delete transaction API finished:', err);
     }
   };
 
@@ -1019,13 +1050,12 @@ export default function App() {
                         </div>
 
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (window.confirm('Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được hoàn lại tự động.')) {
-                              handleDeleteTransaction(tx.id);
-                            }
+                            setTxToDelete(tx);
                           }}
-                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-[#8C857D] hover:text-rose-500 rounded-lg transition cursor-pointer"
+                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-[#8C857D] hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                           title="Xóa giao dịch"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1395,6 +1425,13 @@ export default function App() {
         categories={categories}
         onDelete={handleDeleteTransaction}
         onSuccess={loadAppData}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={!!txToDelete}
+        transaction={txToDelete}
+        onClose={() => setTxToDelete(null)}
+        onConfirm={handleDeleteTransaction}
       />
 
       <AuthModal

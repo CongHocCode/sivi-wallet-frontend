@@ -74,6 +74,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
 
   // Delete Alert State
   const [deleteWarning, setDeleteWarning] = useState<string | null>(null);
+  const [showWalletDeleteConfirm, setShowWalletDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Statement Search & Timeframe Filter
@@ -234,18 +235,14 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
   };
 
   // Delete wallet with strict protection if only 1 wallet remains
-  const handleDeleteWallet = async () => {
+  const handleExecuteDeleteWallet = async () => {
     if (!selectedWallet) return;
 
     if (wallets.length <= 1) {
       setDeleteWarning('Bạn cần duy trì ít nhất 1 ví trong hệ thống. Không thể xóa ví duy nhất còn lại!');
+      setShowWalletDeleteConfirm(false);
       return;
     }
-
-    const isConfirmed = window.confirm(
-      `Bạn có chắc chắn muốn xóa ví "${selectedWallet.name}"?\n(Dữ liệu các giao dịch lịch sử vẫn được bảo toàn an toàn trong hệ thống)`
-    );
-    if (!isConfirmed) return;
 
     setIsDeleting(true);
     try {
@@ -256,6 +253,7 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
       setDeleteWarning(err.message || 'Lỗi khi xóa ví');
     } finally {
       setIsDeleting(false);
+      setShowWalletDeleteConfirm(false);
     }
   };
 
@@ -540,9 +538,16 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
 
                   <button
                     type="button"
-                    onClick={handleDeleteWallet}
+                    onClick={() => {
+                      if (wallets.length <= 1) {
+                        setDeleteWarning('Bạn cần duy trì ít nhất 1 ví trong hệ thống. Không thể xóa ví duy nhất còn lại!');
+                        return;
+                      }
+                      setShowWalletDeleteConfirm(true);
+                      setDeleteWarning(null);
+                    }}
                     disabled={isDeleting}
-                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl transition flex items-center gap-1 border border-rose-200 disabled:opacity-50"
+                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl transition flex items-center gap-1 border border-rose-200 disabled:opacity-50 cursor-pointer"
                     title="Xóa ví khỏi hệ thống"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -550,6 +555,36 @@ export const WalletsView: React.FC<WalletsViewProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Wallet Delete Confirmation Banner */}
+              {showWalletDeleteConfirm && (
+                <div className="mt-2.5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 space-y-2 animate-in fade-in">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <p className="font-semibold leading-relaxed">
+                      Bạn có chắc muốn xóa ví &quot;{selectedWallet.name}&quot;? (Dữ liệu giao dịch lịch sử vẫn được bảo toàn)
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowWalletDeleteConfirm(false)}
+                      disabled={isDeleting}
+                      className="px-3 py-1 bg-white hover:bg-[#F9F8F3] text-[#4A443F] font-bold rounded-lg border border-[#EAE7DC] cursor-pointer"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExecuteDeleteWallet}
+                      disabled={isDeleting}
+                      className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg shadow-2xs transition cursor-pointer disabled:opacity-50"
+                    >
+                      {isDeleting ? 'Đang xóa...' : 'Xác nhận xóa ví'}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Warning Alert if Cannot Delete or Error */}
               {deleteWarning && (
