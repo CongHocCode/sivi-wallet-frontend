@@ -29,6 +29,7 @@ import {
   Clock,
   Tag,
   Trash2,
+  Split,
 } from 'lucide-react';
 import { Transaction, Wallet, Category, TransactionType, DebtSummary, Group, GroupBill } from '../types';
 import { formatVND, formatVNDShort, getTxDate } from '../lib/formatters';
@@ -177,14 +178,38 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
 
   // Summary statistics for debts
   const debtSummary = useMemo(() => {
-    const totalActiveDebt = debts.reduce((sum, d) => sum + d.amount, 0);
-    const filteredDebts = selectedDebtGroupId === 'ALL'
-      ? debts
-      : debts.filter((d) => d.groupId === selectedDebtGroupId);
+    const totalActiveDebt = (debts || []).reduce((sum, d) => sum + (Number(d?.amount) || 0), 0);
+    const personalDebtsCount = (debts || []).filter(
+      (d) =>
+        !d.groupId ||
+        d.groupId === 'none' ||
+        d.groupId === 'direct_split' ||
+        d.groupId === 'PERSONAL' ||
+        d.groupName === 'Chia lẻ cá nhân' ||
+        d.groupName === 'Chia lẻ' ||
+        !d.groupName
+    ).length;
+
+    const filteredDebts = (debts || []).filter((d) => {
+      if (selectedDebtGroupId === 'ALL') return true;
+      if (selectedDebtGroupId === 'PERSONAL') {
+        return (
+          !d.groupId ||
+          d.groupId === 'none' ||
+          d.groupId === 'direct_split' ||
+          d.groupId === 'PERSONAL' ||
+          d.groupName === 'Chia lẻ cá nhân' ||
+          d.groupName === 'Chia lẻ' ||
+          !d.groupName
+        );
+      }
+      return String(d.groupId) === String(selectedDebtGroupId);
+    });
 
     return {
       total: totalActiveDebt,
-      count: debts.length,
+      count: (debts || []).length,
+      personalCount: personalDebtsCount,
       filteredDebts,
     };
   }, [debts, selectedDebtGroupId]);
@@ -833,10 +858,11 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
             </div>
           </div>
 
-          {/* Group Filter for Debts */}
-          {groups.length > 0 && (
+          {/* Group & Chia Lẻ Filter for Debts */}
+          {((debts && debts.length > 0) || groups.length > 0) && (
             <div className="flex flex-wrap items-center gap-1.5">
               <button
+                type="button"
                 onClick={() => setSelectedDebtGroupId('ALL')}
                 className={`px-3 py-1.5 text-xs font-bold rounded-xl transition whitespace-nowrap ${
                   selectedDebtGroupId === 'ALL'
@@ -844,13 +870,39 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
                     : 'bg-[#F1EFE7] text-[#8C857D] hover:text-[#2D2926]'
                 }`}
               >
-                Tất cả nhóm ({debts.length})
+                Tất cả ({debtSummary.count})
               </button>
+
+              {debtSummary.personalCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedDebtGroupId('PERSONAL')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-xl transition whitespace-nowrap flex items-center gap-1.5 ${
+                    selectedDebtGroupId === 'PERSONAL'
+                      ? 'bg-[#D98B72] text-white shadow-2xs'
+                      : 'bg-[#F1EFE7] text-[#8C857D] hover:text-[#2D2926]'
+                  }`}
+                >
+                  <Split className="w-3.5 h-3.5" />
+                  <span>Chia lẻ cá nhân</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold ${
+                      selectedDebtGroupId === 'PERSONAL'
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[#D98B72]/15 text-[#D98B72]'
+                    }`}
+                  >
+                    {debtSummary.personalCount}
+                  </span>
+                </button>
+              )}
+
               {groups.map((g) => {
-                const count = debts.filter((d) => d.groupId === g.id).length;
+                const count = (debts || []).filter((d) => String(d.groupId) === String(g.id)).length;
                 return (
                   <button
                     key={g.id}
+                    type="button"
                     onClick={() => setSelectedDebtGroupId(g.id)}
                     className={`px-3 py-1.5 text-xs font-bold rounded-xl transition whitespace-nowrap flex items-center gap-1.5 ${
                       selectedDebtGroupId === g.id
@@ -860,9 +912,13 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
                   >
                     <span>{g.name}</span>
                     {count > 0 && (
-                      <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold ${
-                        selectedDebtGroupId === g.id ? 'bg-white/20 text-white' : 'bg-[#D98B72]/15 text-[#D98B72]'
-                      }`}>
+                      <span
+                        className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold ${
+                          selectedDebtGroupId === g.id
+                            ? 'bg-white/20 text-white'
+                            : 'bg-[#D98B72]/15 text-[#D98B72]'
+                        }`}
+                      >
                         {count}
                       </span>
                     )}
@@ -878,56 +934,123 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
               <div className="bg-white border border-[#EAE7DC] rounded-3xl p-12 text-center text-[#8C857D] space-y-2">
                 <CheckCircle2 className="w-12 h-12 text-[#7D8F69] mx-auto" />
                 <p className="text-sm font-bold text-[#2D2926]">Sạch nợ! Không còn khoản nào cần thanh toán.</p>
-                <p className="text-xs">Mọi người trong nhóm đã thanh toán sòng phẳng.</p>
+                <p className="text-xs">
+                  {selectedDebtGroupId === 'PERSONAL'
+                    ? 'Không có khoản nợ chia lẻ cá nhân nào đang chờ thanh toán.'
+                    : selectedDebtGroupId !== 'ALL'
+                    ? 'Nhóm này đã thanh toán sòng phẳng.'
+                    : 'Tất cả các khoản chia tiền đều đã sòng phẳng.'}
+                </p>
               </div>
             ) : (
-              debtSummary.filteredDebts.map((d, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white border border-[#EAE7DC] rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 hover:border-[#7D8F69] transition"
-                >
-                  {/* Left: Debtor and Creditor Flow */}
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-[#D98B72]/10 text-[#D98B72] flex items-center justify-center font-black text-xs shrink-0">
-                      NỢ
+              debtSummary.filteredDebts.map((d, idx) => {
+                const isChiaLe =
+                  !d.groupId ||
+                  d.groupId === 'none' ||
+                  d.groupId === 'direct_split' ||
+                  d.groupId === 'PERSONAL' ||
+                  d.groupName === 'Chia lẻ cá nhân' ||
+                  d.groupName === 'Chia lẻ' ||
+                  !d.groupName;
+
+                // Helper to format clean real name
+                const cleanPersonName = (raw?: string | null) => {
+                  if (!raw) return '';
+                  let res = String(raw).trim();
+                  if (res.startsWith('name_')) res = res.replace(/^name_/, '');
+                  if (res.startsWith('gst_')) res = res.replace(/^gst_/, '');
+                  return res;
+                };
+
+                const otherName =
+                  cleanPersonName(d.otherUserName) ||
+                  (d.type === 'YOU_OWE'
+                    ? cleanPersonName(d.creditorName)
+                    : cleanPersonName(d.debtorName)) ||
+                  'Bạn bè';
+
+                const isYouOwe =
+                  d.type === 'YOU_OWE' ||
+                  (!d.type && (d.debtorName === 'Tôi' || d.debtorName?.includes('(Tôi)')));
+
+                // Strict render matching prompt:
+                // If debt.type === 'YOU_OWE': "Bạn (Tôi) phải trả cho [debt.otherUserName]"
+                // If debt.type === 'OWES_YOU': "[debt.otherUserName] phải trả cho Bạn (Tôi)"
+                const debtorDisplay = isYouOwe ? 'Bạn (Tôi)' : otherName;
+                const creditorDisplay = isYouOwe ? otherName : 'Bạn (Tôi)';
+
+                return (
+                  <div
+                    key={idx}
+                    className="bg-white border border-[#EAE7DC] rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 hover:border-[#7D8F69] transition"
+                  >
+                    {/* Left: Debtor and Creditor Flow */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
+                          isChiaLe ? 'bg-[#D98B72]/10 text-[#D98B72]' : 'bg-[#7D8F69]/10 text-[#7D8F69]'
+                        }`}
+                      >
+                        {isChiaLe ? 'LẺ' : 'NHÓM'}
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-sm font-bold text-[#2D2926] flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[#D98B72] font-black">{debtorDisplay}</span>
+                          <span className="text-[#8C857D] font-normal text-xs">phải trả cho</span>
+                          <span className="text-[#7D8F69] font-black">{creditorDisplay}</span>
+                        </p>
+                        <div className="flex items-center gap-2 flex-wrap text-xs">
+                          {isChiaLe ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#FAF9F5] text-[#8C857D] text-[11px] font-semibold border border-[#EAE7DC]">
+                              <Split className="w-3 h-3 text-[#D98B72]" /> Kèo chia lẻ cá nhân
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#7D8F69]/10 text-[#5F6E4E] text-[11px] font-semibold">
+                              <Users2 className="w-3 h-3 text-[#7D8F69]" /> Nhóm: {d.groupName || 'Nhóm chung'}
+                            </span>
+                          )}
+                          {isYouOwe ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-50 text-rose-600 text-[10.5px] font-bold border border-rose-200">
+                              Bạn cần trả
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 text-[10.5px] font-bold border border-emerald-200">
+                              Bạn cần thu
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0 space-y-0.5">
-                      <p className="text-sm font-bold text-[#2D2926] flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[#D98B72] font-black">{d.debtorName}</span>
-                        <span className="text-[#8C857D] font-normal text-xs">phải trả cho</span>
-                        <span className="text-[#7D8F69] font-black">{d.creditorName}</span>
-                      </p>
-                      <p className="text-xs text-[#8C857D] flex items-center gap-1">
-                        <Users2 className="w-3.5 h-3.5 text-[#7D8F69]" /> Nhóm: {d.groupName}
-                      </p>
+
+                    {/* Right: Amount & Action Button */}
+                    <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#F9F8F3]">
+                      <div className="text-left sm:text-right">
+                        <span className="text-[10px] text-[#8C857D] uppercase font-bold block sm:hidden">
+                          Số tiền:
+                        </span>
+                        <span
+                          className={`text-base sm:text-lg font-black whitespace-nowrap ${
+                            isYouOwe ? 'text-[#D98B72]' : 'text-[#7D8F69]'
+                          }`}
+                          title={formatVND(d.amount)}
+                        >
+                          {formatVND(d.amount)}
+                        </span>
+                      </div>
+
+                      {onSettleDebt && (
+                        <button
+                          type="button"
+                          onClick={() => onSettleDebt(d)}
+                          className="px-4 py-2 bg-[#7D8F69] hover:bg-[#687856] text-white rounded-xl text-xs font-bold transition shadow-2xs flex items-center gap-1.5 shrink-0"
+                        >
+                          <Check className="w-3.5 h-3.5" /> Tất Toán Ngay
+                        </button>
+                      )}
                     </div>
                   </div>
-
-                  {/* Right: Amount & Action Button */}
-                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#F9F8F3]">
-                    <div className="text-left sm:text-right">
-                      <span className="text-[10px] text-[#8C857D] uppercase font-bold block sm:hidden">
-                        Số tiền:
-                      </span>
-                      <span
-                        className="text-base sm:text-lg font-black text-[#D98B72] whitespace-nowrap"
-                        title={formatVND(d.amount)}
-                      >
-                        {formatVND(d.amount)}
-                      </span>
-                    </div>
-
-                    {onSettleDebt && (
-                      <button
-                        onClick={() => onSettleDebt(d)}
-                        className="px-4 py-2 bg-[#7D8F69] hover:bg-[#687856] text-white rounded-xl text-xs font-bold transition shadow-2xs flex items-center gap-1.5 shrink-0"
-                      >
-                        <Check className="w-3.5 h-3.5" /> Tất Toán Ngay
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

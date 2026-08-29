@@ -291,17 +291,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             const debtorName = debt.debtorName || guestBackupLabel;
             const creditorName = debt.creditorName || guestBackupLabel;
 
+            const debtorFormattedName = debtorName.includes('[Sao Lưu]') ? debtorName : `${debtorName} [Sao Lưu]`;
+
             await api.bills.create({
               groupId: null,
-              title: `[Sao Lưu Nợ] ${debtorName} ➔ ${creditorName}`,
+              payerId: null,
+              payerName: creditorName,
+              walletId: null,
+              categoryId: 1,
               totalAmount: debt.amount || 0,
+              description: `[Sao Lưu Nợ] ${debtorName} ➔ ${creditorName}`,
+              sourceType: 'MANUAL',
+              items: [
+                {
+                  userId: null,
+                  fullName: debtorFormattedName,
+                  amountShare: debt.amount || 0,
+                  isPaid: false,
+                },
+              ],
+              title: `[Sao Lưu Nợ] ${debtorName} ➔ ${creditorName}`,
               payerMemberId: 'usr_001',
               payerMemberName: creditorName,
               category: 'Tất toán nợ nhóm',
               splits: [
                 {
                   memberId: 'gst_backup_' + Date.now(),
-                  memberName: debtorName.includes('[Sao Lưu]') ? debtorName : `${debtorName} [Sao Lưu]`,
+                  memberName: debtorFormattedName,
                   amount: debt.amount || 0,
                 },
               ],

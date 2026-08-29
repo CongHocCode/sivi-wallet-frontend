@@ -109,9 +109,16 @@ export interface SplitDetail {
 
 export interface BillItem {
   userId?: string | number | null;
-  fullName?: string;
+  fullName?: string | null;
   amountShare: number;
-  isPaid: boolean;
+  isPaid?: boolean;
+}
+
+export interface CreateBillItemRequest {
+  userId?: number | string | null;
+  fullName?: string | null;
+  amountShare: number;
+  isPaid?: boolean;
 }
 
 export interface GroupBill {
@@ -137,13 +144,56 @@ export interface GroupBill {
 }
 
 export type BillResponse = GroupBill;
-export type CreateBillRequest = any;
+
+export interface CreateBillRequest {
+  groupId?: number | string | null;
+  payerId?: number | string | null;
+  payerName?: string | null;
+  walletId?: number | string | null;
+  categoryId?: number | string | null;
+  totalAmount: number;
+  description?: string;
+  sourceType?: string;
+  items: CreateBillItemRequest[];
+  // UI & compatibility helper fields
+  title?: string;
+  receiptImageUrl?: string | null;
+  groupName?: string;
+  payerMemberId?: string;
+  payerMemberName?: string;
+  splitType?: SplitType;
+  splits?: SplitDetail[];
+  date?: string;
+  category?: string;
+  note?: string;
+}
+
+export type DebtType = 'YOU_OWE' | 'OWES_YOU';
+
+export interface DebtItemResponse {
+  id?: string | number;
+  billDetailId?: string | number;
+  otherUserId?: string | number | null;
+  otherUserName?: string;
+  type?: DebtType | string;
+  amount: number;
+  groupId?: string | number | null;
+  groupName?: string;
+  debtorId?: string | number;
+  debtorName?: string;
+  creditorId?: string | number;
+  creditorName?: string;
+}
 
 export interface DebtSummary {
-  debtorId?: string;
+  id?: string | number;
+  debtorId?: string | number;
   debtorName: string;
-  creditorId?: string;
+  creditorId?: string | number;
   creditorName: string;
+  otherUserId?: string | number | null;
+  otherUserName?: string;
+  type?: DebtType | string;
   amount: number;
   groupId?: string | null;
   groupName: string;

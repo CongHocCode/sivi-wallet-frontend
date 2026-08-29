@@ -61,6 +61,7 @@ import {
   TransactionType,
 } from './types';
 import { formatVND, formatVNDShort, getTxDate, formatDate, formatTxDateTime, formatLocalISO, getGreetingName } from './lib/formatters';
+import { calculateDebtMatrix } from './services/mockData';
 
 // Modals & Views
 import { AddTransactionModal } from './components/AddTransactionModal';
@@ -345,13 +346,146 @@ export default function App() {
       setBills(billList);
 
       // Unpack debts into both debtLedger and debts
-      const debtList = Array.isArray(debtsRes)
+      let rawDebtList = Array.isArray(debtsRes)
         ? debtsRes
         : Array.isArray((debtsRes as any)?.debts)
           ? (debtsRes as any).debts
           : Array.isArray((debtsRes as any)?.data)
             ? (debtsRes as any).data
             : [];
+
+      if (rawDebtList.length === 0 && billList.length > 0) {
+        rawDebtList = calculateDebtMatrix(billList);
+      }
+
+      // Build a lookup map of member IDs / names from groups and bills
+      const memberNameMap: Record<string, string> = {};
+      const currentUserName = uData?.fullName || uData?.name || uData?.username || 'Tôi';
+      if (uData?.id) {
+        memberNameMap[String(uData.id)] = `${currentUserName} (Tôi)`;
+      }
+      memberNameMap['1'] = `${currentUserName} (Tôi)`;
+      memberNameMap['usr_001'] = `${currentUserName} (Tôi)`;
+
+      groupList.forEach((g: Group) => {
+        if (Array.isArray(g.members)) {
+          g.members.forEach((m) => {
+            if (m.id && m.name) memberNameMap[String(m.id)] = m.name;
+            if (m.userId && m.name) memberNameMap[String(m.userId)] = m.name;
+          });
+        }
+      });
+
+      billList.forEach((b: GroupBill) => {
+        if (b.payerMemberId && b.payerMemberName) {
+          memberNameMap[String(b.payerMemberId)] = b.payerMemberName;
+        }
+        if (b.payerId && b.payerName) {
+          memberNameMap[String(b.payerId)] = b.payerName;
+        }
+        if (Array.isArray(b.splits)) {
+          b.splits.forEach((s) => {
+            if (s.memberId && s.memberName) memberNameMap[String(s.memberId)] = s.memberName;
+          });
+        }
+        if (Array.isArray(b.items)) {
+          b.items.forEach((it) => {
+            if (it.userId && it.fullName) memberNameMap[String(it.userId)] = it.fullName;
+          });
+        }
+      });
+
+      const resolveDebtPersonName = (rawName?: string, rawId?: string | number, defaultRole = 'Người dùng') => {
+        let name = rawName ? String(rawName).trim() : '';
+        const idStr = rawId ? String(rawId).trim() : '';
+
+        // If starts with name_ or gst_
+        if (name.startsWith('name_')) name = name.replace(/^name_/, '');
+        if (name.startsWith('gst_')) name = name.replace(/^gst_/, '');
+
+        // If ID is found in memberNameMap and current name is missing or generic
+        if ((!name || name.startsWith('User #') || name === 'usr_001' || name === '1') && idStr && memberNameMap[idStr]) {
+          return memberNameMap[idStr];
+        }
+
+        if (!name && idStr) {
+          if (memberNameMap[idStr]) return memberNameMap[idStr];
+          if (idStr === '1' || idStr === 'usr_001' || (uData && idStr === String(uData.id))) {
+            return `${currentUserName} (Tôi)`;
+          }
+          return `Thành viên #${idStr}`;
+        }
+
+        if (name === 'Tôi' || name === currentUserName) {
+          return `${currentUserName} (Tôi)`;
+        }
+
+        return name || defaultRole;
+      };
+
+      const debtList: DebtSummary[] = rawDebtList.map((d: any) => {
+        const isChiaLe = !d.groupId || d.groupId === 'none' || d.groupId === 'direct_split' || d.groupId === 'PERSONAL';
+        const rawType = d.type as 'YOU_OWE' | 'OWES_YOU' | undefined;
+        const rawOtherUserName = d.otherUserName || d.otherName;
+        const rawOtherUserId = d.otherUserId;
+
+        let debtorId = d.debtorId || d.debtor?.id || undefined;
+        let rawDebtorName = d.debtorName || d.debtorFullName || d.debtor?.fullName || d.debtor?.name;
+        let creditorId = d.creditorId || d.creditor?.id || undefined;
+        let rawCreditorName = d.creditorName || d.creditorFullName || d.creditor?.fullName || d.creditor?.name;
+
+        let resolvedOtherUserName = rawOtherUserName ? resolveDebtPersonName(rawOtherUserName, rawOtherUserId, 'Bạn bè') : '';
+        let type: 'YOU_OWE' | 'OWES_YOU' = rawType || 'OWES_YOU';
+        let debtorName = '';
+        let creditorName = '';
+
+        if (rawType === 'YOU_OWE') {
+          debtorName = `${currentUserName} (Tôi)`;
+          debtorId = uData?.id ? String(uData.id) : '1';
+          creditorName = resolvedOtherUserName || resolveDebtPersonName(rawCreditorName, creditorId, 'Người nhận');
+          creditorId = rawOtherUserId ? String(rawOtherUserId) : creditorId;
+          resolvedOtherUserName = creditorName;
+        } else if (rawType === 'OWES_YOU') {
+          debtorName = resolvedOtherUserName || resolveDebtPersonName(rawDebtorName, debtorId, 'Người nợ');
+          debtorId = rawOtherUserId ? String(rawOtherUserId) : debtorId;
+          creditorName = `${currentUserName} (Tôi)`;
+          creditorId = uData?.id ? String(uData.id) : '1';
+          resolvedOtherUserName = debtorName;
+        } else {
+          // Infer type from debtorName / creditorName
+          const isDebtorMe =
+            rawDebtorName === 'Tôi' ||
+            rawDebtorName === currentUserName ||
+            (debtorId && (debtorId === '1' || debtorId === 'usr_001' || (uData && String(debtorId) === String(uData.id))));
+
+          if (isDebtorMe) {
+            type = 'YOU_OWE';
+            debtorName = `${currentUserName} (Tôi)`;
+            creditorName = resolveDebtPersonName(rawCreditorName, creditorId, 'Người nhận');
+            resolvedOtherUserName = creditorName;
+          } else {
+            type = 'OWES_YOU';
+            debtorName = resolveDebtPersonName(rawDebtorName, debtorId, 'Người nợ');
+            creditorName = `${currentUserName} (Tôi)`;
+            resolvedOtherUserName = debtorName;
+          }
+        }
+
+        return {
+          id: d.id,
+          debtorId,
+          debtorName,
+          creditorId,
+          creditorName,
+          otherUserId: rawOtherUserId || (type === 'YOU_OWE' ? creditorId : debtorId),
+          otherUserName: resolvedOtherUserName,
+          type,
+          amount: Number(d.amount || d.totalAmount || 0),
+          groupId: isChiaLe ? null : String(d.groupId),
+          groupName: d.groupName || (isChiaLe ? 'Chia lẻ cá nhân' : 'Nhóm'),
+          billDetailId: d.billDetailId || d.id || undefined,
+        };
+      });
 
       setDebts(debtList);
       const calculatedDebtLedger = {
@@ -1348,6 +1482,7 @@ export default function App() {
         isOpen={isAddGroupOpen}
         onClose={() => setIsAddGroupOpen(false)}
         onSuccess={loadAppData}
+        user={user}
       />
 
       <AddBillModal

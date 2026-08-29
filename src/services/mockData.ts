@@ -78,87 +78,9 @@ export const INITIAL_CATEGORIES: Category[] = [
   { id: 'cat_010', name: 'Thanh toán nợ nhóm', type: 'INCOME', icon: 'CheckCircle2', color: '#10B981', isDefault: true },
 ];
 
-export const INITIAL_GROUPS: Group[] = [
-  {
-    id: 'grp_001',
-    name: 'Chuyến Đi Đà Lạt 3N2Đ 🌲',
-    description: 'Du lịch nhóm bạn thân tháng 8',
-    createdAt: '2026-08-01T10:00:00Z',
-    members: [
-      { id: 'usr_001', name: 'Trần Minh Nam (Tôi)', isGuest: false, userId: 'usr_001' },
-      { id: 'm_002', name: 'Nguyễn Văn Hùng', isGuest: true },
-      { id: 'm_003', name: 'Lê Thị Lan', isGuest: false, email: 'lan.le@gmail.com' },
-      { id: 'm_004', name: 'Tuấn (Bạn Hùng)', isGuest: true },
-    ],
-  },
-  {
-    id: 'grp_002',
-    name: 'Nhà Trọ 402 🏠',
-    description: 'Chia tiền điện, nước, internet hàng tháng',
-    createdAt: '2026-07-15T08:00:00Z',
-    members: [
-      { id: 'usr_001', name: 'Trần Minh Nam (Tôi)', isGuest: false, userId: 'usr_001' },
-      { id: 'm_005', name: 'Phạm Nhật Hoàng', isGuest: true },
-      { id: 'm_006', name: 'Vũ Anh Khoa', isGuest: false, email: 'khoa.vu@gmail.com' },
-    ],
-  },
-];
+export const INITIAL_GROUPS: Group[] = [];
 
-export const INITIAL_BILLS: GroupBill[] = [
-  {
-    id: 'bill_001',
-    groupId: 'grp_001',
-    groupName: 'Chuyến Đi Đà Lạt 3N2Đ 🌲',
-    title: 'Tiền xe khách khứ hồi Sài Gòn - Đà Lạt',
-    totalAmount: 1200000,
-    payerMemberId: 'usr_001',
-    payerMemberName: 'Trần Minh Nam (Tôi)',
-    splitType: 'EQUAL',
-    category: 'Đi lại & Xe cộ',
-    date: '2026-08-02T14:20:00Z',
-    splits: [
-      { memberId: 'usr_001', memberName: 'Trần Minh Nam (Tôi)', amount: 30000 },
-      { memberId: 'm_002', memberName: 'Nguyễn Văn Hùng', amount: 300000 },
-      { memberId: 'm_003', memberName: 'Lê Thị Lan', amount: 300000 },
-      { memberId: 'm_004', memberName: 'Tuấn (Bạn Hùng)', amount: 300000 },
-    ],
-  },
-  {
-    id: 'bill_002',
-    groupId: 'grp_001',
-    groupName: 'Chuyến Đi Đà Lạt 3N2Đ 🌲',
-    title: 'Ăn lẩu gà lá é & Bánh ướt lòng gà',
-    totalAmount: 840000,
-    payerMemberId: 'm_003',
-    payerMemberName: 'Lê Thị Lan',
-    splitType: 'EQUAL',
-    category: 'Ăn uống',
-    date: '2026-08-03T19:30:00Z',
-    splits: [
-      { memberId: 'usr_001', memberName: 'Trần Minh Nam (Tôi)', amount: 210000 },
-      { memberId: 'm_002', memberName: 'Nguyễn Văn Hùng', amount: 210000 },
-      { memberId: 'm_003', memberName: 'Lê Thị Lan', amount: 210000 },
-      { memberId: 'm_004', memberName: 'Tuấn (Bạn Hùng)', amount: 210000 },
-    ],
-  },
-  {
-    id: 'bill_003',
-    groupId: 'grp_002',
-    groupName: 'Nhà Trọ 402 🏠',
-    title: 'Tiền điện nước + Internet T7/2026',
-    totalAmount: 1350000,
-    payerMemberId: 'usr_001',
-    payerMemberName: 'Trần Minh Nam (Tôi)',
-    splitType: 'EQUAL',
-    category: 'Hóa đơn & Tiện ích',
-    date: '2026-08-05T09:00:00Z',
-    splits: [
-      { memberId: 'usr_001', memberName: 'Trần Minh Nam (Tôi)', amount: 450000 },
-      { memberId: 'm_005', memberName: 'Phạm Nhật Hoàng', amount: 450000 },
-      { memberId: 'm_006', memberName: 'Vũ Anh Khoa', amount: 450000 },
-    ],
-  },
-];
+export const INITIAL_BILLS: GroupBill[] = [];
 
 export const INITIAL_TRANSACTIONS: Transaction[] = [
   {
@@ -192,22 +114,6 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
   {
     id: 'tx_003',
     userId: 'usr_001',
-    walletId: 'wal_002',
-    walletName: 'Vietcombank',
-    categoryId: 'cat_002',
-    categoryName: 'Đi lại & Xe cộ',
-    categoryIcon: 'Car',
-    amount: 300000,
-    type: 'EXPENSE',
-    note: 'Tiền xe khách khứ hồi (Đà Lạt)',
-    groupId: 'grp_001',
-    groupName: 'Chuyến Đi Đà Lạt 3N2Đ 🌲',
-    date: '2026-08-02T14:20:00Z',
-    createdAt: '2026-08-02T14:20:00Z',
-  },
-  {
-    id: 'tx_004',
-    userId: 'usr_001',
     walletId: 'wal_001',
     walletName: 'Tiền mặt',
     categoryId: 'cat_003',
@@ -215,50 +121,99 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     categoryIcon: 'ShoppingBag',
     amount: 450000,
     type: 'EXPENSE',
-    note: 'Mua áo sơ mi công sở Uniqlo',
+    note: 'Mua sắm đồ dùng cá nhân',
     date: '2026-08-09T18:30:00Z',
     createdAt: '2026-08-09T18:30:00Z',
   },
-  {
-    id: 'tx_005',
-    userId: 'usr_001',
-    walletId: 'wal_003',
-    walletName: 'Ví MoMo',
-    categoryId: 'cat_010',
-    categoryName: 'Thanh toán nợ nhóm',
-    categoryIcon: 'CheckCircle2',
-    amount: 450000,
-    type: 'SETTLEMENT',
-    note: 'Hoàng chuyển khoản trả tiền điện nhà trọ',
-    settlementDebtorName: 'Phạm Nhật Hoàng',
-    date: '2026-08-08T15:00:00Z',
-    createdAt: '2026-08-08T15:00:00Z',
-  },
 ];
 
-// Helper to calculate debt matrix from group bills
+// Helper to clean and format member display name
+function cleanMemberName(rawName?: string | null, userId?: string | number | null): string {
+  if (!rawName) {
+    if (userId !== undefined && userId !== null && userId !== '') {
+      if (String(userId) === '1' || String(userId) === 'usr_001') return 'Tôi';
+      return `Thành viên #${userId}`;
+    }
+    return 'Thành viên';
+  }
+  let clean = String(rawName).trim();
+  if (clean.startsWith('name_')) {
+    clean = clean.replace(/^name_/, '');
+  }
+  if (clean.startsWith('gst_')) {
+    clean = clean.replace(/^gst_/, '');
+  }
+  return clean || 'Thành viên';
+}
+
+// Helper to calculate debt matrix from group & personal bills
 export function calculateDebtMatrix(bills: GroupBill[]): DebtSummary[] {
   const balances: Record<string, { memberId: string; name: string; balance: number; groupId: string; groupName: string }> = {};
 
-  bills.forEach((bill) => {
-    const payerId = String(bill.payerMemberId || bill.payerId || 'usr_001');
-    const payerName = bill.payerMemberName || bill.payerName || 'Tôi';
-    const groupId = bill.groupId ? String(bill.groupId) : 'direct_split';
-    const groupName = bill.groupName || (bill.groupId ? 'Nhóm' : 'Chia lẻ cá nhân');
+  (bills || []).forEach((bill) => {
+    const rawPayerId = bill.payerMemberId || bill.payerId;
+    const rawPayerName = bill.payerMemberName || bill.payerName;
+    const isChiaLe = !bill.groupId || bill.groupId === 'none' || bill.groupId === 'direct_split';
+    const groupId = isChiaLe ? 'direct_split' : String(bill.groupId);
+    const groupName = bill.groupName || (isChiaLe ? 'Chia lẻ cá nhân' : 'Nhóm');
 
-    (bill.splits || []).forEach((split) => {
+    // Build normalized split list from either bill.splits or bill.items
+    const splitList: { memberId: string; name: string; amount: number; isPaid?: boolean }[] = [];
+
+    if (Array.isArray(bill.splits) && bill.splits.length > 0) {
+      bill.splits.forEach((s, idx) => {
+        const sName = cleanMemberName(s.memberName, s.memberId);
+        splitList.push({
+          memberId: String(s.memberId || `spl_${idx}`),
+          name: sName,
+          amount: Number(s.amount || 0),
+        });
+      });
+    } else if (Array.isArray(bill.items) && bill.items.length > 0) {
+      bill.items.forEach((it, idx) => {
+        const hasUserId = it.userId !== undefined && it.userId !== null && it.userId !== '';
+        const mId = hasUserId
+          ? String(it.userId)
+          : it.fullName
+          ? `name_${it.fullName}`
+          : `item_${idx}`;
+        
+        const mName = cleanMemberName(it.fullName, it.userId);
+        
+        splitList.push({
+          memberId: mId,
+          name: mName,
+          amount: Number(it.amountShare || 0),
+          isPaid: it.isPaid,
+        });
+      });
+    }
+
+    // Determine payer
+    let payerId = rawPayerId ? String(rawPayerId) : 'usr_001';
+    let payerName = cleanMemberName(rawPayerName, payerId);
+
+    // If payer is identified via isPaid item
+    const paidItem = splitList.find((s) => s.isPaid === true);
+    if ((!rawPayerName || rawPayerName === 'Tôi') && paidItem && paidItem.name && paidItem.name !== 'Tôi') {
+      payerId = paidItem.memberId;
+      payerName = paidItem.name;
+    }
+
+    splitList.forEach((split) => {
       const memberId = String(split.memberId);
-      if (memberId === payerId) return; // Self debt offset
+      if (memberId === payerId || split.isPaid === true) return; // Skip if self or already paid
 
-      // Payer is owed money (+), split member owes money (-)
+      if (split.amount <= 0) return;
+
       const keyPayer = `${groupId}:::${payerId}`;
       const keyMember = `${groupId}:::${memberId}`;
 
       if (!balances[keyPayer]) {
-        balances[keyPayer] = { memberId: payerId, name: payerName, balance: 0, groupId: bill.groupId || '', groupName };
+        balances[keyPayer] = { memberId: payerId, name: payerName, balance: 0, groupId: isChiaLe ? '' : (bill.groupId || ''), groupName };
       }
       if (!balances[keyMember]) {
-        balances[keyMember] = { memberId, name: split.memberName, balance: 0, groupId: bill.groupId || '', groupName };
+        balances[keyMember] = { memberId, name: split.name, balance: 0, groupId: isChiaLe ? '' : (bill.groupId || ''), groupName };
       }
 
       balances[keyPayer].balance += split.amount;
@@ -279,14 +234,24 @@ export function calculateDebtMatrix(bills: GroupBill[]): DebtSummary[] {
 
       const debtAmount = Math.min(b1.balance, Math.abs(b2.balance));
       if (debtAmount > 100) {
+        const isB2Me = b2.memberId === 'usr_001' || b2.memberId === '1' || b2.name === 'Tôi' || b2.name.includes('(Tôi)');
+        const isB1Me = b1.memberId === 'usr_001' || b1.memberId === '1' || b1.name === 'Tôi' || b1.name.includes('(Tôi)');
+
+        const type: 'YOU_OWE' | 'OWES_YOU' = isB2Me ? 'YOU_OWE' : 'OWES_YOU';
+        const otherUserId = isB2Me ? b1.memberId : b2.memberId;
+        const otherUserName = isB2Me ? b1.name : b2.name;
+
         debts.push({
           debtorId: b2.memberId,
-          debtorName: b2.name,
+          debtorName: isB2Me ? 'Tôi' : b2.name || 'Người nợ',
           creditorId: b1.memberId,
-          creditorName: b1.name,
+          creditorName: isB1Me ? 'Tôi' : b1.name || 'Người nhận',
+          otherUserId,
+          otherUserName,
+          type,
           amount: Math.round(debtAmount),
-          groupId: b1.groupId || null,
-          groupName: b1.groupName,
+          groupId: b1.groupId ? b1.groupId : null,
+          groupName: b1.groupName || (b1.groupId ? 'Nhóm' : 'Chia lẻ cá nhân'),
         });
 
         b1.balance -= debtAmount;

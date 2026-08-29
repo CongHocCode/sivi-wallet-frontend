@@ -1,9 +1,9 @@
 /**
- * SIVI WALLET - Add Group Modal with Smart Member Search (Name, Username, Email, Guest)
+ * SIVI WALLET - Add Group Modal with Unified Smart Member Search (Name, Username, Email, Guest)
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Users, UserPlus, Search, UserCheck } from 'lucide-react';
+import { X, Users, UserPlus, Search, Crown, Sparkles, AlertCircle } from 'lucide-react';
 import { api } from '../services/api';
 import { User } from '../types';
 
@@ -11,6 +11,7 @@ interface AddGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  user?: User | null;
 }
 
 interface GroupMemberItem {
@@ -22,27 +23,10 @@ interface GroupMemberItem {
   userId?: string;
 }
 
-export const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, onSuccess }) => {
+export const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, onSuccess, user }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [members, setMembers] = useState<GroupMemberItem[]>([
-    {
-      id: 'usr_003',
-      name: 'Lê Thị Lan',
-      username: 'lan.le',
-      email: 'lan.le@gmail.com',
-      isGuest: false,
-      userId: 'usr_003',
-    },
-    {
-      id: 'usr_004',
-      name: 'Phạm Nhật Hoàng',
-      username: 'hoang.pn',
-      email: 'hoang.pn@sivi.vn',
-      isGuest: false,
-      userId: 'usr_004',
-    },
-  ]);
+  const [members, setMembers] = useState<GroupMemberItem[]>([]);
 
   // Smart Search & Autocomplete
   const [searchQuery, setSearchQuery] = useState('');
@@ -103,6 +87,9 @@ export const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, o
   // Reset form when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
+      setName('');
+      setDescription('');
+      setMembers([]);
       setError(null);
       setSearchQuery('');
       setShowSearchDropdown(false);
@@ -110,6 +97,10 @@ export const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, o
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const currentUserName = user?.fullName || user?.name || user?.username || 'Tôi';
+  const currentUserHandle = user?.username ? `@${user.username}` : user?.email || 'Tài khoản của tôi';
+  const currentUserInitial = currentUserName.charAt(0).toUpperCase();
 
   // Add real registered user from search result
   const handleAddRealUser = (userItem: User) => {
@@ -141,6 +132,29 @@ export const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, o
     setSearchQuery('');
     setShowSearchDropdown(false);
     setError(null);
+  };
+
+  // Handle Enter key in search box
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const q = searchQuery.trim();
+      if (!q) return;
+
+      // Check if there is an exact matching user in search results
+      const exactMatch = searchResults.find(
+        (u) =>
+          (u.username && u.username.toLowerCase() === q.toLowerCase().replace(/^@/, '')) ||
+          (u.email && u.email.toLowerCase() === q.toLowerCase()) ||
+          (u.fullName && u.fullName.toLowerCase() === q.toLowerCase())
+      );
+
+      if (exactMatch) {
+        handleAddRealUser(exactMatch);
+      } else {
+        handleAddGuest(q);
+      }
+    }
   };
 
   // Remove member from group list
@@ -236,78 +250,90 @@ export const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, o
           </div>
 
           {/* Member Addition Area */}
-          <div className="space-y-2 pt-2 border-t border-[#EAE7DC]">
+          <div className="space-y-2.5 pt-2 border-t border-[#EAE7DC]">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-[#4A443F] flex items-center gap-1.5">
                 <Users className="w-4 h-4 text-[#7D8F69]" />
                 <span>3. Thành viên nhóm ({members.length + 1} người):</span>
               </label>
+              <span className="text-[11px] text-[#8C857D]">
+                Nhấn Enter hoặc chọn từ danh sách để thêm
+              </span>
             </div>
 
             {/* Leader (Self - Non-removable) */}
             <div className="flex items-center justify-between p-2.5 px-3 rounded-2xl bg-[#7D8F69]/10 text-xs font-bold text-[#2D2926] border border-[#7D8F69]/25">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-full bg-[#7D8F69] text-white flex items-center justify-center text-xs font-black shrink-0">
-                  N
+                <div className="w-7 h-7 rounded-full bg-[#7D8F69] text-white flex items-center justify-center text-xs font-black shrink-0 shadow-2xs">
+                  {currentUserInitial}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-[#2D2926] truncate">Trần Minh Nam (Tôi)</p>
-                  <p className="text-[10px] text-[#7D8F69] truncate font-medium">@nam.tm • nam.tm@sivi.vn</p>
+                  <p className="text-xs font-bold text-[#2D2926] truncate flex items-center gap-1">
+                    <span>{currentUserName}</span>
+                    <span className="text-[10px] text-[#7D8F69] font-semibold">(Tôi)</span>
+                  </p>
+                  <p className="text-[10px] text-[#7D8F69] truncate font-medium">{currentUserHandle}</p>
                 </div>
               </div>
-              <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-[#7D8F69] text-white shrink-0">
-                Trưởng nhóm
+              <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-[#7D8F69] text-white shrink-0 flex items-center gap-1">
+                <Crown className="w-2.5 h-2.5" /> Trưởng nhóm
               </span>
             </div>
 
             {/* Added members list */}
-            <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
-              {members.map((m) => {
-                const displayName = m.name;
-                const uname = m.username ? `@${m.username}` : m.email || '';
-                return (
-                  <div
-                    key={m.id}
-                    className="flex items-center justify-between p-2 px-3 rounded-2xl bg-[#FAF9F5] text-xs font-semibold text-[#2D2926] border border-[#EAE7DC] hover:border-[#7D8F69]/40 transition"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                        m.isGuest ? 'bg-[#D98B72]/15 text-[#D98B72]' : 'bg-[#7D8F69]/15 text-[#7D8F69]'
-                      }`}>
-                        {displayName.charAt(0).toUpperCase()}
+            {members.length > 0 ? (
+              <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                {members.map((m) => {
+                  const displayName = m.name;
+                  const uname = m.username ? `@${m.username}` : m.email || '';
+                  return (
+                    <div
+                      key={m.id}
+                      className="flex items-center justify-between p-2 px-3 rounded-2xl bg-[#FAF9F5] text-xs font-semibold text-[#2D2926] border border-[#EAE7DC] hover:border-[#7D8F69]/40 transition"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                          m.isGuest ? 'bg-[#D98B72]/15 text-[#D98B72]' : 'bg-[#7D8F69]/15 text-[#7D8F69]'
+                        }`}>
+                          {displayName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-[#2D2926] truncate">{displayName}</p>
+                          {uname && <p className="text-[10px] text-[#8C857D] truncate font-normal">{uname}</p>}
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-[#2D2926] truncate">{displayName}</p>
-                        {uname && <p className="text-[10px] text-[#8C857D] truncate font-normal">{uname}</p>}
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {m.isGuest ? (
+                          <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#D98B72]/15 text-[#D98B72] border border-[#D98B72]/30">
+                            Khách
+                          </span>
+                        ) : (
+                          <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#7D8F69]/15 text-[#7D8F69] border border-[#7D8F69]/30">
+                            Thành viên
+                          </span>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMember(m.id)}
+                          className="p-1 text-[#8C857D] hover:text-[#D98B72] hover:bg-rose-50 rounded-lg transition"
+                          title="Xóa khỏi nhóm"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-3 text-center bg-[#FAF9F5] border border-dashed border-[#EAE7DC] rounded-2xl text-[11px] text-[#8C857D]">
+                Nhóm hiện chỉ có bạn. Hãy tìm kiếm người dùng hoặc gõ tên bạn bè ở ô bên dưới để thêm vào nhóm!
+              </div>
+            )}
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      {m.isGuest ? (
-                        <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#D98B72]/15 text-[#D98B72] border border-[#D98B72]/30">
-                          Khách
-                        </span>
-                      ) : (
-                        <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#7D8F69]/15 text-[#7D8F69] border border-[#7D8F69]/30">
-                          Thành viên {m.username ? `(@${m.username})` : ''}
-                        </span>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMember(m.id)}
-                        className="p-1 text-[#8C857D] hover:text-[#D98B72] hover:bg-rose-50 rounded-lg transition"
-                        title="Xóa khỏi nhóm"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Smart Search & Auto-complete Box */}
+            {/* Smart Search & Auto-complete Box (Same mechanism as AddBillModal) */}
             <div ref={searchContainerRef} className="relative pt-1">
               <div className="relative">
                 <Search className="w-3.5 h-3.5 text-[#8C857D] absolute left-3 top-2.5 pointer-events-none" />
@@ -322,7 +348,8 @@ export const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, o
                   onFocus={() => {
                     if (searchQuery.trim()) setShowSearchDropdown(true);
                   }}
-                  placeholder="🔍 Tìm kiếm theo tên, @username, email hoặc gõ tên khách mới..."
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="🔍 Tìm kiếm theo tên, @username, email hoặc gõ tên bạn bè & nhấn Enter..."
                   className="w-full pl-8 pr-10 py-2 text-xs font-semibold rounded-xl border border-[#EAE7DC] bg-[#FAF9F5] text-[#2D2926] focus:ring-2 focus:ring-[#7D8F69] focus:outline-none placeholder:text-[#8C857D]"
                 />
                 {searchQuery && (
@@ -355,12 +382,12 @@ export const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, o
                         !members.some(
                           (m) =>
                             (m.userId && String(m.userId) === String(u.id)) ||
-                            m.id === u.id ||
+                            m.id === String(u.id) ||
                             m.name.toLowerCase().trim() === (u.fullName || u.name || '').toLowerCase().trim()
                         )
                     )
                     .map((userItem) => {
-                      const displayName = userItem.fullName || userItem.name || userItem.username;
+                      const displayName = userItem.fullName || userItem.name || userItem.username || 'Thành viên';
                       const detailLine = [
                         userItem.username ? `@${userItem.username}` : '',
                         userItem.email || '',
@@ -387,7 +414,7 @@ export const AddGroupModal: React.FC<AddGroupModalProps> = ({ isOpen, onClose, o
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#7D8F69]/15 text-[#7D8F69] border border-[#7D8F69]/30">
-                              Thành viên {userItem.username ? `(@${userItem.username})` : ''}
+                              Thành viên
                             </span>
                             <span className="text-[10px] font-bold text-[#7D8F69] flex items-center gap-0.5 ml-1">
                               <UserPlus className="w-3 h-3" /> Thêm

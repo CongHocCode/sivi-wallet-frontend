@@ -546,19 +546,55 @@ const billsModule = {
     return Array.isArray(res) ? res : [];
   },
 
-  create: async (billData: CreateBillRequest | any): Promise<BillResponse> => {
-    const payload: any = {
-      groupId: billData.groupId && billData.groupId !== 'none' ? Number(billData.groupId) : null,
-      walletId: Number(billData.walletId),
-      categoryId: Number(billData.categoryId || 1),
-      totalAmount: Number(billData.totalAmount),
+  create: async (billData: CreateBillRequest): Promise<BillResponse> => {
+    const groupId =
+      billData.groupId && billData.groupId !== 'none'
+        ? !isNaN(Number(billData.groupId))
+          ? Number(billData.groupId)
+          : billData.groupId
+        : null;
+
+    const payerId =
+      billData.payerId !== undefined && billData.payerId !== null && billData.payerId !== ''
+        ? !isNaN(Number(billData.payerId))
+          ? Number(billData.payerId)
+          : billData.payerId
+        : null;
+
+    const payerName = billData.payerName ? String(billData.payerName).trim() : null;
+
+    const walletId =
+      billData.walletId !== undefined && billData.walletId !== null && billData.walletId !== ''
+        ? !isNaN(Number(billData.walletId))
+          ? Number(billData.walletId)
+          : billData.walletId
+        : null;
+
+    const categoryId =
+      billData.categoryId !== undefined && billData.categoryId !== null && billData.categoryId !== ''
+        ? !isNaN(Number(billData.categoryId))
+          ? Number(billData.categoryId)
+          : billData.categoryId
+        : 1;
+
+    const payload = {
+      groupId,
+      payerId,
+      payerName,
+      walletId,
+      categoryId,
+      totalAmount: Number(billData.totalAmount || 0),
       description: billData.description || billData.title || 'Chia tiền',
-      receiptImageUrl: billData.receiptImageUrl || null,
       sourceType: billData.sourceType || 'MANUAL',
-      items: (billData.items || []).map((it: any) => ({
-        userId: it.userId ? Number(it.userId) : null,
-        fullName: it.fullName || it.name || null,
-        amountShare: Number(it.amountShare || it.amount),
+      items: (billData.items || []).map((it) => ({
+        userId:
+          it.userId !== undefined && it.userId !== null && it.userId !== ''
+            ? !isNaN(Number(it.userId))
+              ? Number(it.userId)
+              : it.userId
+            : null,
+        fullName: it.fullName || (it as any).name || null,
+        amountShare: Number(it.amountShare || 0),
         isPaid: Boolean(it.isPaid),
       })),
     };

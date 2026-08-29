@@ -75,6 +75,8 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
   const [payerType, setPayerType] = useState<'ME' | 'OTHER'>('ME');
   const [walletId, setWalletId] = useState<string>('');
   const [otherPayerId, setOtherPayerId] = useState<string>('');
+  const [isCustomPayer, setIsCustomPayer] = useState<boolean>(false);
+  const [customPayerName, setCustomPayerName] = useState<string>('');
 
   // Mục 5: Danh sách thành viên tham gia & chọn người chịu tiền
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -337,12 +339,19 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
   };
 
   // Xác định người thanh toán
-  const otherParticipants = participants.filter((p) => !p.isMe);
+  const otherParticipants = useMemo(() => participants.filter((p) => !p.isMe), [participants]);
   const effectiveOtherPayerId = otherPayerId || otherParticipants[0]?.id || '';
   const effectiveOtherPayer = otherParticipants.find((p) => p.id === effectiveOtherPayerId) || otherParticipants[0];
 
-  const actualPayerId = payerType === 'ME' ? myParticipant.id : effectiveOtherPayer?.id || 'guest_friend';
-  const actualPayerName = payerType === 'ME' ? myParticipant.name : effectiveOtherPayer?.name || 'Bạn bè';
+  const actualPayerName = useMemo(() => {
+    if (payerType === 'ME') {
+      return myParticipant.name;
+    }
+    if (isCustomPayer && customPayerName.trim()) {
+      return customPayerName.trim();
+    }
+    return effectiveOtherPayer?.name || customPayerName.trim() || 'Người khác';
+  }, [payerType, myParticipant.name, isCustomPayer, customPayerName, effectiveOtherPayer]);
 
   // Tính toán số tiền phân chia cho các thành viên được chọn
   const selectedList = participants.filter((p) => selectedMemberIds.has(p.id));
@@ -453,9 +462,15 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
       setError('Vui lòng chọn ví dùng để thanh toán');
       return;
     }
-    if (payerType === 'OTHER' && !effectiveOtherPayer) {
-      setError('Vui lòng chọn người đã đứng ra thanh toán');
-      return;
+    if (payerType === 'OTHER') {
+      if (isCustomPayer && !customPayerName.trim()) {
+        setError('Vui lòng nhập tên người đã thanh toán hộ');
+        return;
+      }
+      if (!isCustomPayer && !effectiveOtherPayer) {
+        setError('Vui lòng chọn người đã đứng ra thanh toán hoặc gõ tên mới');
+        return;
+      }
     }
     if (selectedCount === 0) {
       setError('Vui lòng tích chọn ít nhất 1 người chịu chi phí');
@@ -471,36 +486,72 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
       return;
     }
 
-    // Payload items chuẩn gửi api.bills.create
+    // Xác định payerId, payerName, walletId theo chuẩn Backend Spring Boot
+    let finalPayerId: number | string | null = null;
+    let finalPayerName: string | null = null;
+    let finalWalletId: number | string | null = null;
+
+    if (payerType === 'ME') {
+      // 1. Tôi đã trả tiền: Bắt buộc walletId, payerId = null, payerName = null
+      finalPayerId = null;
+      finalPayerName = null;
+      finalWalletId = walletId;
+    } else {
+      // 2. Người khác trả hộ: walletId = null
+      finalWalletId = null;
+      if (isCustomPayer) {
+        finalPayerId = null;
+        finalPayerName = customPayerName.trim();
+      } else if (effectiveOtherPayer) {
+        if (effectiveOtherPayer.userId) {
+          finalPayerId = effectiveOtherPayer.userId;
+          finalPayerName = null;
+        } else {
+          finalPayerId = null;
+          finalPayerName = effectiveOtherPayer.name;
+        }
+      } else {
+        finalPayerId = null;
+        finalPayerName = customPayerName.trim() || 'Người khác';
+      }
+    }
+
+    // Payload items chuẩn gửi Backend:
+    // - Khi tôi trả (payerType === 'ME'): Tôi (user) có isPaid = true, người khác isPaid = false
+    // - Khi người khác trả (payerType === 'OTHER'): Người trả có isPaid = true, Tôi (user) mặc định isPaid = false
     const itemsPayload: BillItem[] = participants.map((p) => {
-      const isPayer = p.id === actualPayerId;
       const splitObj = splitsBreakdown.find((s) => s.memberId === p.id);
       const amountShare = splitObj ? splitObj.amount : 0;
 
-      // 1. Nếu là Tôi
       if (p.isMe) {
         return {
-          userId: p.userId || 'usr_001',
+          userId: p.userId ? (!isNaN(Number(p.userId)) ? Number(p.userId) : p.userId) : 1,
+          fullName: currentUserName || 'Tôi',
           amountShare,
-          isPaid: isPayer,
+          isPaid: payerType === 'ME', // Tôi trả: true; Người khác trả: false
         };
       }
 
-      // 2. Nếu chọn người đã có (User thật hoặc Khách cũ): Gửi userId
+      const isThisOtherPayer =
+        payerType === 'OTHER' &&
+        (!isCustomPayer
+          ? p.id === effectiveOtherPayer?.id
+          : p.name.trim().toLowerCase() === customPayerName.trim().toLowerCase());
+
       if (p.userId) {
         return {
-          userId: p.userId,
+          userId: !isNaN(Number(p.userId)) ? Number(p.userId) : p.userId,
+          fullName: p.name,
           amountShare,
-          isPaid: isPayer,
+          isPaid: isThisOtherPayer,
         };
       }
 
-      // 3. Nếu là khách mới tinh: Gửi fullName (để userId = null)
       return {
         userId: null,
         fullName: p.name,
         amountShare,
-        isPaid: isPayer,
+        isPaid: isThisOtherPayer,
       };
     });
 
@@ -509,19 +560,22 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
     try {
       const isGroupSelected = groupId && groupId !== 'none';
       const selectedGroup = isGroupSelected ? groups.find((g) => g.id === groupId) : null;
-
       const finalCategoryId = categoryId ? (!isNaN(Number(categoryId)) ? Number(categoryId) : categoryId) : 1;
 
       await api.bills.create({
         groupId: isGroupSelected ? groupId : null,
-        walletId: payerType === 'ME' ? walletId : undefined,
+        payerId: finalPayerId,
+        payerName: finalPayerName || actualPayerName,
+        walletId: finalWalletId,
         categoryId: finalCategoryId as any,
         totalAmount,
         description: title.trim(),
+        sourceType: 'MANUAL',
         items: itemsPayload,
+        // UI & compatibility optional fields
         title: title.trim(),
         groupName: isGroupSelected ? selectedGroup?.name || 'Nhóm' : 'Chia lẻ cá nhân',
-        payerMemberId: actualPayerId,
+        payerMemberId: String(finalPayerId || (finalPayerName ? `gst_${finalPayerName}` : myParticipant.id)),
         payerMemberName: actualPayerName,
         splitType,
         splits: activeSplits,
@@ -531,7 +585,7 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
       setSuccessToast(
         payerType === 'ME'
           ? `Đã lưu chi phí "${title}" thành công!`
-          : `Đã lưu chi phí! Tự động cập nhật vào Sổ Nợ: bạn nợ ${actualPayerName}.`
+          : `Đã lưu chi phí! Tự động ghi nhận nợ: bạn nợ ${actualPayerName}.`
       );
 
       setTimeout(() => {
@@ -706,29 +760,56 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                 </div>
               </div>
             ) : (
-              <div id="payer-other-friend-select" className="p-3 bg-amber-50/80 rounded-2xl border border-amber-200/80 space-y-1.5">
-                <label className="text-[11px] font-bold text-amber-900 block">
-                  Chọn người đã đứng ra thanh toán:
-                </label>
-                {otherParticipants.length > 0 ? (
+              <div id="payer-other-friend-select" className="p-3 bg-amber-50/90 rounded-2xl border border-amber-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-amber-900 block">
+                    Người đã đứng ra thanh toán hộ:
+                  </label>
+                  {otherParticipants.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomPayer(!isCustomPayer)}
+                      className="text-[10px] font-bold text-amber-800 hover:text-amber-950 underline"
+                    >
+                      {isCustomPayer ? '← Chọn từ danh sách bạn bè' : '+ Gõ tên người mới'}
+                    </button>
+                  )}
+                </div>
+
+                {isCustomPayer || otherParticipants.length === 0 ? (
+                  <div className="space-y-1">
+                    <input
+                      type="text"
+                      value={customPayerName}
+                      onChange={(e) => setCustomPayerName(e.target.value)}
+                      placeholder="Nhập tên người trả tiền (VD: Anh Hùng, Chị Mai, Nam...)"
+                      className="w-full p-2 text-xs font-bold rounded-xl border border-amber-300 bg-white text-[#2D2926] placeholder:font-normal placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    />
+                    {otherParticipants.length === 0 && (
+                      <p className="text-[10px] text-amber-700 italic">
+                        Mẹo: Bạn có thể nhập tên người trả trực tiếp ở đây hoặc thêm thành viên vào kèo ở mục 5.
+                      </p>
+                    )}
+                  </div>
+                ) : (
                   <select
                     value={effectiveOtherPayerId}
-                    onChange={(e) => setOtherPayerId(e.target.value)}
+                    onChange={(e) => {
+                      setOtherPayerId(e.target.value);
+                      setIsCustomPayer(false);
+                    }}
                     className="w-full p-2 text-xs font-bold rounded-xl border border-amber-300 bg-white text-[#2D2926] focus:ring-2 focus:ring-amber-500 focus:outline-none"
                   >
                     {otherParticipants.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} {p.isGuest ? '(Khách)' : ''}
+                        {p.name} {p.isGuest ? '(Khách)' : '(Thành viên)'}
                       </option>
                     ))}
                   </select>
-                ) : (
-                  <p className="text-[11px] text-amber-800">
-                    Vui lòng thêm bạn bè vào danh sách bên dưới để chọn người trả tiền hộ.
-                  </p>
                 )}
-                <p className="text-[10.5px] text-amber-800/80">
-                  ℹ️ Ví cá nhân của bạn sẽ không bị trừ tiền. Hệ thống sẽ ghi nhận bạn nợ người này trong Sổ Nợ.
+
+                <p className="text-[10.5px] text-amber-800/90 leading-relaxed">
+                  ℹ️ Ví của bạn sẽ <strong>không bị trừ tiền</strong>. Hệ thống sẽ ghi nhận bạn nợ người này trong Sổ Nợ.
                 </p>
               </div>
             )}
@@ -775,7 +856,14 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                 const isSelected = selectedMemberIds.has(p.id);
                 const splitItem = splitsBreakdown.find((s) => s.memberId === p.id);
                 const calculatedAmount = splitItem ? splitItem.amount : 0;
-                const isPayer = p.id === actualPayerId;
+                
+                // Xác định trạng thái đã trả tiền hay chưa trả
+                const isPersonPayer =
+                  payerType === 'ME'
+                    ? p.isMe
+                    : !isCustomPayer
+                    ? p.id === effectiveOtherPayer?.id
+                    : p.name.trim().toLowerCase() === customPayerName.trim().toLowerCase();
 
                 return (
                   <div
@@ -802,13 +890,17 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-xs font-bold text-[#2D2926] truncate">{p.name}</span>
-                            {isPayer && (
-                              <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-[#7D8F69]/15 text-[#7D8F69]">
-                                Người trả
+                            {isPersonPayer ? (
+                              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                👑 Người trả (Đã trả)
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+                                ⏳ Nợ tiền (Chưa trả)
                               </span>
                             )}
                             {p.isGuest && (
-                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-[#D98B72]/15 text-[#D98B72]">
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#D98B72]/15 text-[#D98B72]">
                                 Khách
                               </span>
                             )}

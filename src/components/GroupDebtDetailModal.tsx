@@ -186,33 +186,57 @@ export const GroupDebtDetailModal: React.FC<GroupDebtDetailModalProps> = ({
               </div>
             ) : (
               <div className="space-y-2">
-                {groupDebts.map((d, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3.5 bg-white border border-[#EAE7DC] rounded-2xl flex items-center justify-between gap-3 shadow-xs hover:border-[#7D8F69] transition"
-                  >
-                    <div className="flex items-center gap-2 text-xs flex-1">
-                      <span className="font-bold text-[#D98B72]">{d.debtorName}</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-[#8C857D] shrink-0" />
-                      <span className="font-bold text-[#7D8F69]">{d.creditorName}</span>
-                    </div>
+                {groupDebts.map((d, idx) => {
+                  const cleanPersonName = (raw?: string | null) => {
+                    if (!raw) return '';
+                    let res = String(raw).trim();
+                    if (res.startsWith('name_')) res = res.replace(/^name_/, '');
+                    if (res.startsWith('gst_')) res = res.replace(/^gst_/, '');
+                    return res;
+                  };
 
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-sm font-extrabold text-[#D98B72]">
-                        {formatVND(d.amount)}
-                      </span>
-                      <button
-                        onClick={() => {
-                          onSettleDebt(d);
-                          onClose();
-                        }}
-                        className="px-3 py-1.5 bg-[#7D8F69] hover:bg-[#687856] text-white rounded-xl text-[11px] font-bold transition shadow-xs"
-                      >
-                        Thanh Toán
-                      </button>
+                  const otherName =
+                    cleanPersonName(d.otherUserName) ||
+                    (d.type === 'YOU_OWE'
+                      ? cleanPersonName(d.creditorName)
+                      : cleanPersonName(d.debtorName)) ||
+                    'Bạn bè';
+
+                  const isYouOwe =
+                    d.type === 'YOU_OWE' ||
+                    (!d.type && (d.debtorName === 'Tôi' || d.debtorName?.includes('(Tôi)')));
+
+                  const debtorDisplay = isYouOwe ? 'Bạn (Tôi)' : otherName;
+                  const creditorDisplay = isYouOwe ? otherName : 'Bạn (Tôi)';
+
+                  return (
+                    <div
+                      key={idx}
+                      className="p-3.5 bg-white border border-[#EAE7DC] rounded-2xl flex items-center justify-between gap-3 shadow-xs hover:border-[#7D8F69] transition"
+                    >
+                      <div className="flex items-center gap-2 text-xs flex-1">
+                        <span className="font-bold text-[#D98B72]">{debtorDisplay}</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-[#8C857D] shrink-0" />
+                        <span className="font-bold text-[#7D8F69]">{creditorDisplay}</span>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-sm font-extrabold text-[#D98B72]">
+                          {formatVND(d.amount)}
+                        </span>
+                        <button
+                          onClick={() => {
+                            onSettleDebt(d);
+                            onClose();
+                          }}
+                          className="px-3 py-1.5 bg-[#7D8F69] hover:bg-[#687856] text-white rounded-xl text-[11px] font-bold transition shadow-xs"
+                        >
+                          Thanh Toán
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
