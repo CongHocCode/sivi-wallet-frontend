@@ -1,13 +1,21 @@
 {
   "name": "SIVI WALLET - Quản Lý Chi Tiêu & Nợ Nhóm",
   "short_name": "Sivi Wallet",
-  "description": "Trợ lý tài chính thông minh, quản lý chi tiêu cá nhân và chia tiền nợ nhóm với AI",
+  "description": "Trợ lý tài chính thông minh, quản lý chi tiêu cá nhân và chia tiền nợ nhóm với AI Gemini",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "background_color": "#F9F8F3",
   "theme_color": "#7D8F69",
+  "categories": ["finance", "productivity", "utilities"],
   "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",

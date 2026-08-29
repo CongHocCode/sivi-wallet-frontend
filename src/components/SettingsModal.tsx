@@ -18,9 +18,13 @@ import {
   Wifi,
   WifiOff,
   Database,
+  FileSpreadsheet,
+  Copy,
+  Sparkles,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { User, Wallet, Transaction, GroupBill, DebtSummary } from '../types';
+import { SiviLogo } from './SiviLogo';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -112,6 +116,93 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setTimeout(() => setSyncMessage(null), 3500);
     } catch (err) {
       alert('Không thể tạo file sao lưu. Vui lòng thử lại.');
+    }
+  };
+
+  // 1b. Xuất Dữ Liệu Cho Google Sheets / Excel (.csv & Copy TSV)
+  const handleExportGoogleSheets = async (mode: 'download' | 'copy' = 'download') => {
+    try {
+      const [wallets, transactions, groups, bills] = await Promise.all([
+        api.wallets.getAll(),
+        api.transactions.getAll(),
+        api.groups.getAll(),
+        api.bills.getAll(),
+      ]);
+
+      const walletMap = new Map((wallets || []).map((w: any) => [w.id, w.name]));
+      const groupMap = new Map((groups || []).map((g: any) => [g.id, g.name]));
+
+      const headers = [
+        'Mã giao dịch',
+        'Thời gian',
+        'Loại giao dịch',
+        'Số tiền (VNĐ)',
+        'Danh mục',
+        'Ví thanh toán',
+        'Ghi chú',
+        'Nhóm / Sổ Nợ',
+      ];
+
+      const typeLabels: Record<string, string> = {
+        EXPENSE: 'Chi tiêu',
+        INCOME: 'Thu nhập',
+        TRANSFER: 'Chuyển ví nội bộ',
+        SETTLEMENT: 'Tất toán nợ',
+      };
+
+      const rows = (transactions || []).map((tx: any) => {
+        const txType = typeLabels[tx.type] || tx.type;
+        const walletName = tx.walletName || walletMap.get(tx.walletId) || 'Ví chính';
+        const groupName = tx.groupName || (tx.groupId ? groupMap.get(tx.groupId) : '') || '';
+        const txDate = tx.datetime || tx.date || '';
+        const cleanNote = (tx.note || tx.description || '').replace(/"/g, '""');
+
+        return [
+          tx.id || '',
+          txDate,
+          txType,
+          tx.amount || 0,
+          tx.categoryName || 'Chi tiêu chung',
+          walletName,
+          cleanNote,
+          groupName,
+        ];
+      });
+
+      if (mode === 'copy') {
+        // Tab-separated for direct paste into Google Sheets (Cmd+V / Ctrl+V)
+        const tsvContent = [headers.join('\t'), ...rows.map((r: any[]) => r.join('\t'))].join('\n');
+        await navigator.clipboard.writeText(tsvContent);
+        setSyncMessage('📋 Đã sao chép bảng dữ liệu! Dán (Ctrl+V) trực tiếp vào Google Sheets.');
+        setTimeout(() => setSyncMessage(null), 4000);
+        return;
+      }
+
+      // CSV with UTF-8 BOM (\uFEFF) for Excel & Google Sheets direct file upload
+      const csvContent =
+        '\uFEFF' +
+        [
+          headers.map((h) => `"${h}"`).join(','),
+          ...rows.map((r: any[]) => r.map((val) => `"${val}"`).join(',')),
+        ].join('\r\n');
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const fileName = `sivi_wallet_sheets_${dateStr}.csv`;
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', url);
+      downloadAnchor.setAttribute('download', fileName);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      URL.revokeObjectURL(url);
+
+      setSyncMessage(`📊 Đã xuất file Google Sheets / Excel (${fileName}) thành công!`);
+      setTimeout(() => setSyncMessage(null), 4000);
+    } catch (err) {
+      alert('Không thể xuất dữ liệu Google Sheets. Vui lòng thử lại.');
     }
   };
 
@@ -241,15 +332,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       <div className="relative w-full max-w-lg bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl overflow-hidden border border-[#EAE7DC] max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#EAE7DC] bg-[#F9F8F3]">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#7D8F69] text-white flex items-center justify-center font-bold">
-              <ShieldCheck className="w-4 h-4 text-amber-300" />
-            </div>
-            <div>
-              <h2 className="text-sm font-extrabold text-[#2D2926]">Cài Đặt & Đồng Bộ</h2>
-              <p className="text-[10px] text-[#8C857D]">Quản lý tài khoản, trạng thái kết nối và sao lưu dữ liệu</p>
-            </div>
-          </div>
+          <SiviLogo size="sm" />
           <button
             onClick={onClose}
             className="p-1.5 rounded-full text-[#8C857D] hover:text-[#2D2926] hover:bg-[#EAE7DC] transition"
@@ -359,10 +442,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
           </div>
 
+          {/* Google Sheets & Excel Export Section */}
+          <div className="space-y-2 pt-2 border-t border-[#EAE7DC]">
+            <label className="text-xs font-bold text-[#4A443F] uppercase tracking-wider flex items-center justify-between">
+              <span>Xuất Dữ Liệu Báo Cáo:</span>
+              <span className="text-[10px] text-[#7D8F69] font-semibold lowercase">.csv / google sheets</span>
+            </label>
+
+            <div className="p-3.5 bg-[#F9F8F3] rounded-2xl border border-[#EAE7DC] space-y-2.5">
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                  <FileSpreadsheet className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-xs font-bold text-[#2D2926]">Bảng Tính Google Sheets / Excel</h4>
+                  <p className="text-[10px] text-[#8C857D] leading-relaxed">
+                    Xuất toàn bộ giao dịch với đầy đủ ngày giờ, danh mục, ví và sổ nợ định dạng tiếng Việt chuẩn.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                {/* Download CSV */}
+                <button
+                  type="button"
+                  onClick={() => handleExportGoogleSheets('download')}
+                  className="flex-1 py-2 px-3 bg-white hover:bg-emerald-50 text-emerald-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-emerald-300 transition shadow-2xs"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Tải File .CSV (Excel / Sheets)</span>
+                </button>
+
+                {/* Copy for Google Sheets direct paste */}
+                <button
+                  type="button"
+                  onClick={() => handleExportGoogleSheets('copy')}
+                  className="py-2 px-3 bg-[#F1EFE7] hover:bg-[#EAE7DC] text-[#2D2926] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-[#EAE7DC] transition"
+                  title="Sao chép bảng để dán thẳng (Ctrl+V) vào Google Sheets"
+                >
+                  <Copy className="w-3.5 h-3.5 text-[#7D8F69]" />
+                  <span>Sao Chép Dán Sheets</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Backup & Restore Action Buttons */}
           <div className="space-y-2 pt-2 border-t border-[#EAE7DC]">
             <label className="text-xs font-bold text-[#4A443F] uppercase tracking-wider block">
-              Sao lưu & Khôi phục dữ liệu (.json):
+              Sao lưu & Khôi phục dữ liệu hệ thống (.json):
             </label>
 
             <div className="flex flex-col sm:flex-row gap-2">

@@ -1,93 +1,171 @@
 /**
- * SIVI WALLET - Modern SVG Brand Logo
+ * SIVI WALLET - Official Vector Brand Logo Component
+ * Combines Financial Wallet icon with AI Sparkle (✦)
+ * Designed with Sage Green (#7D8F69), Terracotta (#D98B72), and Amber Gold (#F59E0B)
  */
 
-import React from 'react';
+import React, { useId } from 'react';
 
-interface SiviLogoProps {
+export interface SiviLogoProps {
   className?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   showText?: boolean;
+  showTagline?: boolean;
+  taglineText?: string;
+  variant?: 'default' | 'light' | 'dark';
 }
+
+export const SiviLogoIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 36,
+  className = '',
+}) => {
+  const uniqueId = useId().replace(/:/g, '');
+  const bgGradId = `sivi-bg-${uniqueId}`;
+  const sparkGradId = `sivi-spark-${uniqueId}`;
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`shrink-0 select-none ${className}`}
+    >
+      <defs>
+        <linearGradient id={bgGradId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#7D8F69" />
+          <stop offset="100%" stopColor="#5A6D47" />
+        </linearGradient>
+        <linearGradient id={sparkGradId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FEF08A" />
+          <stop offset="40%" stopColor="#F59E0B" />
+          <stop offset="100%" stopColor="#EA580C" />
+        </linearGradient>
+      </defs>
+
+      {/* Main Squircle Container */}
+      <rect width="64" height="64" rx="16" fill={`url(#${bgGradId})`} />
+      <rect
+        x="1"
+        y="1"
+        width="62"
+        height="62"
+        rx="15"
+        stroke="#FFFFFF"
+        strokeWidth="1.5"
+        strokeOpacity="0.25"
+        fill="none"
+      />
+
+      {/* Wallet Body */}
+      <rect
+        x="13"
+        y="19"
+        width="38"
+        height="28"
+        rx="6"
+        fill="#2D2926"
+        stroke="#F9F8F3"
+        strokeWidth="1.5"
+      />
+
+      {/* Wallet Top Card / Cash Insertion Line (Terracotta #D98B72) */}
+      <path
+        d="M19 19H45C46.1 19 47 19.9 47 21V23C47 21.9 46.1 21 45 21H19C17.9 21 17 21.9 17 23V21C17 19.9 17.9 19 19 19Z"
+        fill="#D98B72"
+      />
+
+      {/* Wallet Flap Clasp Accent */}
+      <rect
+        x="41"
+        y="28"
+        width="11"
+        height="10"
+        rx="3"
+        fill="#3D3732"
+        stroke="#F9F8F3"
+        strokeWidth="1"
+      />
+      <circle cx="46.5" cy="33" r="2.2" fill="#F9F8F3" />
+      <circle cx="46.5" cy="33" r="1.1" fill="#D98B72" />
+
+      {/* Primary 4-Point AI Sparkle Star (✦) */}
+      <path
+        d="M26 23 C26 28 21 32 16 32 C21 32 26 36 26 41 C26 36 31 32 36 32 C31 32 26 28 26 23 Z"
+        fill={`url(#${sparkGradId})`}
+      />
+
+      {/* Mini AI Sparkle Star Top Right */}
+      <path
+        d="M48 9 C48 11.5 45.8 13.5 43.5 13.5 C45.8 13.5 48 15.5 48 18 C48 15.5 50.2 13.5 52.5 13.5 C50.2 13.5 48 11.5 48 9 Z"
+        fill="#FEF08A"
+      />
+    </svg>
+  );
+};
 
 export const SiviLogo: React.FC<SiviLogoProps> = ({
   className = '',
   size = 'md',
   showText = true,
+  showTagline = false,
+  taglineText = 'Quản lý chi tiêu & Sổ nợ',
+  variant = 'default',
 }) => {
   const sizeMap = {
-    sm: { icon: 28, text: 'text-base' },
-    md: { icon: 36, text: 'text-xl' },
-    lg: { icon: 48, text: 'text-2xl' },
-    xl: { icon: 64, text: 'text-4xl' },
+    xs: { icon: 24, title: 'text-xs', tag: 'text-[8px]' },
+    sm: { icon: 32, title: 'text-sm sm:text-base', tag: 'text-[9px]' },
+    md: { icon: 40, title: 'text-base sm:text-lg', tag: 'text-[10px]' },
+    lg: { icon: 48, title: 'text-xl sm:text-2xl', tag: 'text-xs' },
+    xl: { icon: 56, title: 'text-2xl sm:text-3xl', tag: 'text-xs' },
   };
 
-  const dims = sizeMap[size];
+  const dims = sizeMap[size] || sizeMap.md;
+
+  const titleColor =
+    variant === 'light'
+      ? 'text-white'
+      : variant === 'dark'
+      ? 'text-slate-100'
+      : 'text-[#2D2926]';
+
+  const accentColor =
+    variant === 'light'
+      ? 'text-emerald-200'
+      : 'text-[#7D8F69]';
+
+  const tagColor =
+    variant === 'light'
+      ? 'text-emerald-100/80'
+      : variant === 'dark'
+      ? 'text-stone-400'
+      : 'text-[#8C857D]';
 
   return (
-    <div className={`flex items-center gap-2.5 font-bold tracking-tight select-none ${className}`}>
+    <div className={`inline-flex items-center gap-2.5 select-none ${className}`}>
       {/* SIVI Wallet Vector Icon */}
-      <div className="relative flex items-center justify-center shrink-0">
-        <svg
-          width={dims.icon}
-          height={dims.icon}
-          viewBox="0 0 48 48"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="drop-shadow-sm transition-transform duration-300 hover:scale-105"
-        >
-          {/* Outer Rounded Shield / Wallet Base */}
-          <rect
-            x="4"
-            y="8"
-            width="40"
-            height="32"
-            rx="10"
-            className="fill-emerald-500 dark:fill-emerald-600"
-          />
-          {/* Inner Wallet Fold */}
-          <path
-            d="M4 18C4 13.5817 7.58172 10 12 10H36C40.4183 10 44 13.5817 44 18V30C44 34.4183 40.4183 38 36 38H12C7.58172 38 4 34.4183 4 30V18Z"
-            fill="url(#sivi-wallet-grad)"
-          />
-          {/* Card Slot Overlay Accent */}
-          <rect x="10" y="14" width="28" height="4" rx="2" fill="white" fillOpacity="0.3" />
-          {/* AI Sparkle Lock Emblem */}
-          <circle cx="34" cy="24" r="5" fill="white" />
-          <circle cx="34" cy="24" r="2.5" className="fill-emerald-600" />
-          {/* AI Magic Glow Spark Sparkle */}
-          <path
-            d="M18 22L19.2 24.8L22 26L19.2 27.2L18 30L16.8 27.2L14 26L16.8 24.8L18 22Z"
-            fill="#F59E0B"
-          />
-          <defs>
-            <linearGradient
-              id="sivi-wallet-grad"
-              x1="4"
-              y1="10"
-              x2="44"
-              y2="38"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop stopColor="#059669" />
-              <stop offset="1" stopColor="#10B981" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
+      <SiviLogoIcon size={dims.icon} />
 
       {/* Brand Typography */}
       {showText && (
         <div className="flex flex-col leading-none">
-          <div className={`font-black tracking-wider uppercase ${dims.text} text-slate-900 dark:text-white flex items-center gap-1`}>
+          <div className={`font-black tracking-tight flex items-center gap-1 ${dims.title} ${titleColor}`}>
             <span>SIVI</span>
-            <span className="text-emerald-600 dark:text-emerald-4-00 font-extrabold">WALLET</span>
+            <span className={`${accentColor} font-black`}>WALLET</span>
           </div>
-          <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 tracking-widest mt-0.5">
-            Smart AI Financials
-          </span>
+
+          {showTagline && taglineText && (
+            <span
+              className={`font-semibold tracking-normal ${dims.tag} ${tagColor} mt-1`}
+            >
+              {taglineText}
+            </span>
+          )}
         </div>
       )}
     </div>
   );
 };
+
+export default SiviLogo;

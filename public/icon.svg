@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Background Sage Green Gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7D8F69" />
+      <stop offset="100%" stop-color="#5C6E49" />
+    </linearGradient>
+
+    <!-- Wallet Body Gradient -->
+    <linearGradient id="wallet-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38332E" />
+      <stop offset="100%" stop-color="#221F1C" />
+    </linearGradient>
+
+    <!-- Gemini Sparkle Amber Gradient -->
+    <linearGradient id="gemini-star-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047" />
+      <stop offset="40%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#EA580C" />
+    </linearGradient>
+
+    <!-- Mini Star Gradient -->
+    <linearGradient id="mini-star-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FEF08A" />
+      <stop offset="100%" stop-color="#F59E0B" />
+    </linearGradient>
+
+    <!-- Subtle Drop Shadow Filter -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Background App Squircle -->
+  <rect width="512" height="512" rx="112" fill="url(#bg-grad)" />
+
+  <!-- Subtle Inner Border Frame -->
+  <rect x="16" y="16" width="480" height="480" rx="96" stroke="#FFFFFF" stroke-opacity="0.15" stroke-width="4" fill="none" />
+
+  <!-- Main Wallet Container -->
+  <g filter="url(#shadow)">
+    <!-- Wallet Outer Body -->
+    <rect x="96" y="152" width="320" height="232" rx="36" fill="url(#wallet-grad)" stroke="#F1EFE7" stroke-width="6" stroke-opacity="0.9" />
+
+    <!-- Wallet Top Card / Cash Insertion Accent -->
+    <path d="M144 152H368C376.837 152 384 159.163 384 168V192C384 183.163 376.837 176 368 176H144C135.163 176 128 183.163 128 192V168C128 159.163 135.163 152 144 152Z" fill="#D98B72" />
+
+    <!-- Wallet Flap Dividing Line -->
+    <path d="M96 232C170 232 200 248 256 248C312 248 342 232 416 232" stroke="#FFFFFF" stroke-opacity="0.2" stroke-width="4" stroke-linecap="round" />
+
+    <!-- Wallet Clasp Clamping Loop -->
+    <rect x="336" y="236" width="80" height="64" rx="16" fill="#2D2926" stroke="#F1EFE7" stroke-width="4" />
+    <circle cx="376" cy="268" r="14" fill="#F1EFE7" />
+    <circle cx="376" cy="268" r="7" fill="#D98B72" />
+
+    <!-- Core Google Gemini AI Sparkle Star (✦) -->
+    <path d="M216 196 C216 236 176 268 136 268 C176 268 216 300 216 340 C216 300 256 268 296 268 C256 268 216 236 216 196 Z" fill="url(#gemini-star-grad)" />
+
+    <!-- Mini Gemini Sparkle (✦) Top Right -->
+    <path d="M376 96 C376 112 360 124 344 124 C360 124 376 136 376 152 C376 136 392 124 408 124 C392 124 376 112 376 96 Z" fill="url(#mini-star-grad)" />
+
+    <!-- Tiny Starlet (✦) Bottom Left Accent -->
+    <path d="M120 376 C120 386 110 394 100 394 C110 394 120 402 120 412 C120 402 130 394 140 394 C130 394 120 386 120 376 Z" fill="#FDE047" />
+  </g>
+</svg>

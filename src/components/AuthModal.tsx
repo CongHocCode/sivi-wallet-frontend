@@ -21,6 +21,7 @@ import {
 import { api } from '../services/api';
 import { User } from '../types';
 import { getGreetingName } from '../lib/formatters';
+import { SiviLogo } from './SiviLogo';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -174,18 +175,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </button>
           )}
 
-          <div className="flex items-center gap-3 mb-2 relative z-10">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/20 shadow-xs">
-              <Wallet className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-black tracking-tight leading-none">SIVI WALLET</h2>
-              <span className="text-[10px] text-emerald-100 font-bold uppercase tracking-widest">
-                Quản lý chi tiêu & Chia tiền nhóm
-              </span>
-            </div>
+          <div className="mb-2 relative z-10">
+            <SiviLogo
+              size="lg"
+              variant="light"
+              showTagline={true}
+              taglineText="Quản lý chi tiêu & Chia tiền nhóm"
+            />
           </div>
-          <p className="text-xs text-emerald-50/90 font-medium relative z-10">
+          <p className="text-xs text-emerald-50/90 font-medium relative z-10 mt-1">
             {isRegister
               ? 'Tạo tài khoản mới để đồng bộ dữ liệu ví trên mọi thiết bị'
               : 'Đăng nhập để xem báo cáo tài chính và sổ nợ thông minh'}

@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Download, X, Smartphone, Share, PlusSquare, Check } from 'lucide-react';
+import { Download, X, Share, PlusSquare, Check } from 'lucide-react';
+import { SiviLogoIcon } from './SiviLogo';
 
 export const PWAInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -73,9 +74,7 @@ export const PWAInstallPrompt: React.FC = () => {
       <div className="fixed top-3 left-3 right-3 z-50 md:hidden animate-in slide-in-from-top duration-300">
         <div className="bg-[#2D2926] text-white p-3.5 rounded-2xl shadow-xl border border-[#4A443F] flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#7D8F69] rounded-xl flex items-center justify-center shrink-0 shadow-xs">
-              <Smartphone className="w-5 h-5 text-white" />
-            </div>
+            <SiviLogoIcon size={38} className="shadow-xs" />
             <div>
               <h4 className="text-xs font-extrabold text-white">Cài đặt Sivi Wallet</h4>
               <p className="text-[10px] text-stone-300">Dùng mượt như App Native, mở 1-chạm & offline</p>

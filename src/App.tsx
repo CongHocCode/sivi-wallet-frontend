@@ -80,6 +80,7 @@ import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { TransactionHistoryView } from './components/TransactionHistoryView';
 import { TransactionDetailModal } from './components/TransactionDetailModal';
 import { GroupsView } from './components/GroupsView';
+import { SiviLogo } from './components/SiviLogo';
 
 import { geminiService } from './services/geminiService';
 
@@ -601,32 +602,12 @@ export default function App() {
 
       {/* MOBILE TOP BAR (visible on screens < md) */}
       <header className="md:hidden flex items-center justify-between px-4 py-2.5 bg-white border-b border-[#EAE7DC] shrink-0 z-30">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-[#7D8F69] rounded-xl flex items-center justify-center text-white shadow-xs">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-              <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
-            </svg>
-          </div>
-          <div>
-            <span className="text-sm font-black tracking-tight text-[#4A443F] block leading-none">
-              SIVI WALLET
-            </span>
-            <span className="text-[9px] text-[#7D8F69] font-bold tracking-wider uppercase">
-              Quản lý chi tiêu
-            </span>
-          </div>
-        </div>
+        <button
+          onClick={() => setActiveTab('overview')}
+          className="text-left active:opacity-80 transition"
+        >
+          <SiviLogo size="sm" showTagline={false} />
+        </button>
 
         <div className="flex items-center gap-1.5">
           <button
@@ -662,32 +643,12 @@ export default function App() {
       {/* LEFT NAVIGATION SIDEBAR (Desktop) */}
       <aside className="hidden md:flex w-64 bg-white border-r border-[#EAE7DC] flex-col p-6 shrink-0">
         {/* Brand Logo Header */}
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 bg-[#7D8F69] rounded-xl flex items-center justify-center text-white shadow-sm">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-              <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
-            </svg>
-          </div>
-          <div>
-            <span className="text-xl font-bold tracking-tight text-[#4A443F] block leading-none">
-              SIVI WALLET
-            </span>
-            <span className="text-[10px] text-[#8C857D] font-medium tracking-wider uppercase">
-              Chân thực • Tự nhiên
-            </span>
-          </div>
-        </div>
+        <button
+          onClick={() => setActiveTab('overview')}
+          className="text-left mb-8 block active:opacity-85 transition"
+        >
+          <SiviLogo size="md" showTagline={true} taglineText="Quản lý chi tiêu & Sổ nợ" />
+        </button>
 
         {/* Navigation Links */}
         <nav className="flex-1 space-y-2">
