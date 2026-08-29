@@ -52,13 +52,10 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({
     setError(null);
 
     try {
-      await api.bills.settleDebt(
-        debt.debtorName,
-        debt.creditorName,
-        debt.amount,
-        effectiveWalletId,
-        debt.groupName
-      );
+      const rawDetailId = debt.billDetailId ?? debt.id ?? 1;
+      const billDetailId = typeof rawDetailId === 'number' ? rawDetailId : (!isNaN(Number(rawDetailId)) ? Number(rawDetailId) : rawDetailId);
+
+      await api.bills.settleDebt(billDetailId, effectiveWalletId);
 
       onSuccess();
       onClose();

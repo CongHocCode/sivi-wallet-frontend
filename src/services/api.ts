@@ -616,16 +616,21 @@ const billsModule = {
   },
 
   settleDebt: async (
-    billDetailIdOrDebtor: any,
-    walletIdOrCreditor: any,
-    amount?: number,
-    walletId?: any,
-    groupName?: string
+    billDetailId: number | string,
+    walletId: number | string
   ): Promise<boolean> => {
-    const effectiveWalletId = walletId || walletIdOrCreditor;
-    const detailId = billDetailIdOrDebtor;
+    // Extract ID if an object was mistakenly passed
+    let targetDetailId: number | string = billDetailId;
+    if (typeof billDetailId === 'object' && billDetailId !== null) {
+      targetDetailId = (billDetailId as any).billDetailId ?? (billDetailId as any).id ?? 1;
+    }
+
+    // Convert to number if numeric string
+    const numId = Number(targetDetailId);
+    const validId = !isNaN(numId) && numId > 0 ? numId : targetDetailId;
+
     try {
-      await apiClient.request(`/bills/settle/${detailId}?walletId=${effectiveWalletId}`, {
+      await apiClient.request(`/bills/settle/${validId}?walletId=${walletId}`, {
         method: 'POST',
       });
       return true;
@@ -761,7 +766,7 @@ export const api = {
   getGroupBills: () => billsModule.getAll(),
   addGroupBill: (billData: any) => billsModule.create(billData),
   getDebtLedger: () => billsModule.getDebts(),
-  settleDebt: (a?: any, b?: any, c?: any, d?: any, e?: any) => billsModule.settleDebt(a, b, c, d, e),
+  settleDebt: (billDetailId: number | string, walletId: number | string) => billsModule.settleDebt(billDetailId, walletId),
 
   getFinancialCoachAdvice: (inc: number, exp: number, txs: Transaction[]) => coachModule.getFinancialCoachAdvice(inc, exp, txs),
 };

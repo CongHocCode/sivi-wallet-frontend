@@ -19,7 +19,7 @@ import {
   WifiOff,
   Database,
   FileSpreadsheet,
-  Copy,
+  FileText,
   Sparkles,
 } from 'lucide-react';
 import { api } from '../services/api';
@@ -119,14 +119,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  // 1b. Xuất Dữ Liệu Cho Google Sheets / Excel (.csv & Copy TSV)
-  const handleExportGoogleSheets = async (mode: 'download' | 'copy' = 'download') => {
+  // 1b. Xuất Dữ Liệu Giao Dịch Ra File (.csv)
+  const handleExportCSV = async () => {
     try {
-      const [wallets, transactions, groups, bills] = await Promise.all([
+      const [wallets, transactions, groups] = await Promise.all([
         api.wallets.getAll(),
         api.transactions.getAll(),
         api.groups.getAll(),
-        api.bills.getAll(),
       ]);
 
       const walletMap = new Map((wallets || []).map((w: any) => [w.id, w.name]));
@@ -169,16 +168,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         ];
       });
 
-      if (mode === 'copy') {
-        // Tab-separated for direct paste into Google Sheets (Cmd+V / Ctrl+V)
-        const tsvContent = [headers.join('\t'), ...rows.map((r: any[]) => r.join('\t'))].join('\n');
-        await navigator.clipboard.writeText(tsvContent);
-        setSyncMessage('📋 Đã sao chép bảng dữ liệu! Dán (Ctrl+V) trực tiếp vào Google Sheets.');
-        setTimeout(() => setSyncMessage(null), 4000);
-        return;
-      }
-
-      // CSV with UTF-8 BOM (\uFEFF) for Excel & Google Sheets direct file upload
+      // CSV with UTF-8 BOM (\uFEFF) for direct file opening with Vietnamese characters
       const csvContent =
         '\uFEFF' +
         [
@@ -187,7 +177,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         ].join('\r\n');
 
       const dateStr = new Date().toISOString().slice(0, 10);
-      const fileName = `sivi_wallet_sheets_${dateStr}.csv`;
+      const fileName = `sivi_wallet_data_${dateStr}.csv`;
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
 
@@ -199,10 +189,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       downloadAnchor.remove();
       URL.revokeObjectURL(url);
 
-      setSyncMessage(`📊 Đã xuất file Google Sheets / Excel (${fileName}) thành công!`);
+      setSyncMessage(`📊 Đã xuất file CSV (${fileName}) thành công!`);
       setTimeout(() => setSyncMessage(null), 4000);
     } catch (err) {
-      alert('Không thể xuất dữ liệu Google Sheets. Vui lòng thử lại.');
+      alert('Không thể xuất dữ liệu file CSV. Vui lòng thử lại.');
     }
   };
 
@@ -458,89 +448,84 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
           </div>
 
-          {/* Google Sheets & Excel Export Section */}
-          <div className="space-y-2 pt-2 border-t border-[#EAE7DC]">
-            <label className="text-xs font-bold text-[#4A443F] uppercase tracking-wider flex items-center justify-between">
-              <span>Xuất Dữ Liệu Báo Cáo:</span>
-              <span className="text-[10px] text-[#7D8F69] font-semibold lowercase">.csv / google sheets</span>
+          {/* Backup & CSV Export Section */}
+          <div className="space-y-3 pt-2 border-t border-[#EAE7DC]">
+            <label className="text-xs font-bold text-[#4A443F] uppercase tracking-wider block">
+              Sao lưu & Xuất dữ liệu:
             </label>
 
-            <div className="p-3.5 bg-[#F9F8F3] rounded-2xl border border-[#EAE7DC] space-y-2.5">
-              <div className="flex items-start gap-2.5">
+            {/* CSV Export Option */}
+            <div className="p-3.5 bg-[#F9F8F3] rounded-2xl border border-[#EAE7DC] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                   <FileSpreadsheet className="w-4 h-4" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-bold text-[#2D2926]">Bảng Tính Google Sheets / Excel</h4>
-                  <p className="text-[10px] text-[#8C857D] leading-relaxed">
-                    Xuất toàn bộ giao dịch với đầy đủ ngày giờ, danh mục, ví và sổ nợ định dạng tiếng Việt chuẩn.
+                <div>
+                  <h4 className="text-xs font-bold text-[#2D2926]">Xuất Dữ Liệu Giao Dịch (.CSV)</h4>
+                  <p className="text-[10px] text-[#8C857D]">
+                    Xuất danh sách giao dịch, danh mục, ví và sổ nợ định dạng .csv.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                className="w-full sm:w-auto py-2 px-3.5 bg-white hover:bg-emerald-50 text-emerald-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-emerald-300 transition shadow-2xs shrink-0"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Tải File .CSV</span>
+              </button>
+            </div>
+
+            {/* JSON Backup & Restore Option */}
+            <div className="p-3.5 bg-[#F9F8F3] rounded-2xl border border-[#EAE7DC] space-y-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#EAE7DC] text-[#4A443F] flex items-center justify-center shrink-0">
+                  <Database className="w-4 h-4 text-[#7D8F69]" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-[#2D2926]">Sao Lưu & Khôi Phục Hệ Thống (.JSON)</h4>
+                  <p className="text-[10px] text-[#8C857D]">
+                    Lưu trữ hoặc phục hồi toàn bộ cơ sở dữ liệu (ví, giao dịch, nhóm, sổ nợ).
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                {/* Download CSV */}
+                {/* Export Backup JSON Button */}
                 <button
                   type="button"
-                  onClick={() => handleExportGoogleSheets('download')}
-                  className="flex-1 py-2 px-3 bg-white hover:bg-emerald-50 text-emerald-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-emerald-300 transition shadow-2xs"
+                  onClick={handleExportBackup}
+                  className="flex-1 py-2.5 px-3 bg-white hover:bg-[#F1EFE7] text-[#2D2926] rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-[#EAE7DC] transition shadow-2xs"
                 >
-                  <Download className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Tải File .CSV (Excel / Sheets)</span>
+                  <Download className="w-4 h-4 text-[#7D8F69]" />
+                  <span>Tải Bản Sao Lưu (.json)</span>
                 </button>
 
-                {/* Copy for Google Sheets direct paste */}
+                {/* Restore JSON Button */}
                 <button
                   type="button"
-                  onClick={() => handleExportGoogleSheets('copy')}
-                  className="py-2 px-3 bg-[#F1EFE7] hover:bg-[#EAE7DC] text-[#2D2926] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-[#EAE7DC] transition"
-                  title="Sao chép bảng để dán thẳng (Ctrl+V) vào Google Sheets"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isRestoring}
+                  className="flex-1 py-2.5 px-3 bg-[#7D8F69] hover:bg-[#687856] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-[#7D8F69] transition shadow-2xs disabled:opacity-50"
                 >
-                  <Copy className="w-3.5 h-3.5 text-[#7D8F69]" />
-                  <span>Sao Chép Dán Sheets</span>
+                  <Upload className={`w-4 h-4 ${isRestoring ? 'animate-spin' : ''}`} />
+                  <span>{isRestoring ? 'Đang Khôi Phục...' : 'Khôi Phục Dữ Liệu (.json)'}</span>
                 </button>
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileImport}
+                  accept=".json"
+                  className="hidden"
+                />
               </div>
             </div>
-          </div>
 
-          {/* Backup & Restore Action Buttons */}
-          <div className="space-y-2 pt-2 border-t border-[#EAE7DC]">
-            <label className="text-xs font-bold text-[#4A443F] uppercase tracking-wider block">
-              Sao lưu & Khôi phục dữ liệu hệ thống (.json):
-            </label>
-
-            <div className="flex flex-col sm:flex-row gap-2">
-              {/* Export Backup JSON Button */}
-              <button
-                type="button"
-                onClick={handleExportBackup}
-                className="flex-1 py-2.5 px-3 bg-[#F1EFE7] hover:bg-[#EAE7DC] text-[#2D2926] rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-[#EAE7DC] transition"
-              >
-                <Download className="w-4 h-4 text-[#7D8F69]" />
-                <span>Tải File Sao Lưu (.json)</span>
-              </button>
-
-              {/* Smart Restore JSON Button */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isRestoring}
-                className="flex-1 py-2.5 px-3 bg-[#7D8F69] hover:bg-[#687856] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-[#7D8F69] transition shadow-2xs disabled:opacity-50"
-              >
-                <Upload className={`w-4 h-4 ${isRestoring ? 'animate-spin' : ''}`} />
-                <span>{isRestoring ? 'Đang Khôi Phục...' : 'Khôi Phục Dữ Liệu (.json)'}</span>
-              </button>
-
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileImport}
-                accept=".json"
-                className="hidden"
-              />
-            </div>
             <p className="text-[10px] text-[#8C857D] italic">
-              * Khôi phục thông minh tự động tạo lại ví, giao dịch vào MySQL và bảo toàn Sổ Nợ dưới dạng tài khoản Sao Lưu.
+              * Khôi phục thông minh tự động nạp lại ví, giao dịch và bảo toàn dữ liệu sổ nợ an toàn.
             </p>
           </div>
         </div>

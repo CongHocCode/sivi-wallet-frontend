@@ -271,8 +271,8 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
     }
   };
 
-  // Export current filtered / all transactions to Google Sheets / Excel (.csv)
-  const handleExportSheets = () => {
+  // Export current filtered / all transactions to CSV file (.csv)
+  const handleExportCSV = () => {
     const listToExport = filteredTransactions.length > 0 ? filteredTransactions : transactions;
     if (listToExport.length === 0) {
       alert('Không có giao dịch nào để xuất.');
@@ -360,13 +360,13 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handleExportSheets}
+            onClick={handleExportCSV}
             className="px-3.5 py-2 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
-            title="Xuất dữ liệu dạng bảng tương thích Google Sheets / Excel (.csv)"
+            title="Xuất danh sách giao dịch ra file .CSV"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span className="hidden sm:inline">Xuất Google Sheets</span>
-            <span className="sm:hidden">Xuất Sheets</span>
+            <span className="hidden sm:inline">Xuất File CSV</span>
+            <span className="sm:hidden">Xuất CSV</span>
           </button>
         </div>
       </div>

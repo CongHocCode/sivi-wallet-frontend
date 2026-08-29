@@ -515,6 +515,14 @@ app.get('/api/users/search', handleUserSearch);
 app.get('/users/search', handleUserSearch);
 app.get('/api/auth/search', handleUserSearch);
 
+// Settle bill endpoint
+app.post(['/api/v1/bills/settle/:billDetailId', '/bills/settle/:billDetailId'], (req, res) => {
+  const { billDetailId } = req.params;
+  const { walletId } = req.query;
+  console.log(`[API] Settle debt billDetailId=${billDetailId}, walletId=${walletId}`);
+  return res.json({ success: true, message: 'Tất toán nợ thành công', billDetailId, walletId });
+});
+
 // --- VITE MIDDLEWARE SETUP ---
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

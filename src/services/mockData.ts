@@ -242,6 +242,8 @@ export function calculateDebtMatrix(bills: GroupBill[]): DebtSummary[] {
         const otherUserName = isB2Me ? b1.name : b2.name;
 
         debts.push({
+          id: debts.length + 1,
+          billDetailId: debts.length + 1,
           debtorId: b2.memberId,
           debtorName: isB2Me ? 'Tôi' : b2.name || 'Người nợ',
           creditorId: b1.memberId,

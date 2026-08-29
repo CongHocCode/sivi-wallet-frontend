@@ -187,6 +187,7 @@ export interface DebtItemResponse {
 
 export interface DebtSummary {
   id?: string | number;
+  billDetailId?: number | string;
   debtorId?: string | number;
   debtorName: string;
   creditorId?: string | number;
@@ -197,7 +198,6 @@ export interface DebtSummary {
   amount: number;
   groupId?: string | null;
   groupName: string;
-  billDetailId?: string;
 }
 
 export interface DebtLedgerResponse {
