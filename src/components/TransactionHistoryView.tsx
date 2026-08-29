@@ -24,7 +24,6 @@ import {
   Users2,
   Check,
   AlertCircle,
-  FileSpreadsheet,
   ArrowRight,
   Clock,
   Tag,
@@ -271,73 +270,6 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
     }
   };
 
-  // Export current filtered / all transactions to CSV file (.csv)
-  const handleExportCSV = () => {
-    const listToExport = filteredTransactions.length > 0 ? filteredTransactions : transactions;
-    if (listToExport.length === 0) {
-      alert('Không có giao dịch nào để xuất.');
-      return;
-    }
-
-    const headers = [
-      'Mã giao dịch',
-      'Thời gian',
-      'Loại giao dịch',
-      'Số tiền (VNĐ)',
-      'Danh mục',
-      'Ví thanh toán',
-      'Ghi chú',
-      'Nhóm / Sổ Nợ',
-    ];
-
-    const typeLabels: Record<string, string> = {
-      EXPENSE: 'Chi tiêu',
-      INCOME: 'Thu nhập',
-      TRANSFER: 'Chuyển ví nội bộ',
-      SETTLEMENT: 'Tất toán nợ',
-    };
-
-    const walletNameMap = new Map(wallets.map((w) => [w.id, w.name]));
-
-    const rows = listToExport.map((tx) => {
-      const txType = typeLabels[tx.type] || tx.type;
-      const walletName = tx.walletName || walletNameMap.get(tx.walletId) || 'Ví chính';
-      const txDate = tx.datetime || tx.date || '';
-      const cleanNote = (tx.note || tx.description || '').replace(/"/g, '""');
-
-      return [
-        tx.id || '',
-        txDate,
-        txType,
-        tx.amount || 0,
-        tx.categoryName || 'Chi tiêu chung',
-        walletName,
-        cleanNote,
-        tx.groupName || '',
-      ];
-    });
-
-    const csvContent =
-      '\uFEFF' +
-      [
-        headers.map((h) => `"${h}"`).join(','),
-        ...rows.map((r) => r.map((val) => `"${val}"`).join(',')),
-      ].join('\r\n');
-
-    const dateStr = new Date().toISOString().slice(0, 10);
-    const fileName = `sivi_so_thu_chi_${dateStr}.csv`;
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="space-y-5 animate-in fade-in duration-200">
       {/* Top Header & Sub-Tab Switcher */}
@@ -354,20 +286,6 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
               Quản lý tập trung toàn bộ giao dịch, hóa đơn & công nợ nhóm
             </p>
           </div>
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="px-3.5 py-2 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
-            title="Xuất danh sách giao dịch ra file .CSV"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span className="hidden sm:inline">Xuất File CSV</span>
-            <span className="sm:hidden">Xuất CSV</span>
-          </button>
         </div>
       </div>
 
